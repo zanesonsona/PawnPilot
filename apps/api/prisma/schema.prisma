@@ -1,0 +1,52 @@
+// Phase 1 foundation only.
+// Authentication, users, customers, and pawn transaction models arrive in Phase 2+.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Company {
+  id        String        @id @default(uuid()) @db.Uuid
+  name      String        @db.VarChar(200)
+  slug      String        @unique @db.VarChar(80)
+  status    CompanyStatus @default(ACTIVE)
+  timezone  String        @default("Asia/Manila") @db.VarChar(64)
+  currency  String        @default("PHP") @db.Char(3)
+  createdAt DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
+  branches  Branch[]
+
+  @@map("companies")
+}
+
+model Branch {
+  id        String       @id @default(uuid()) @db.Uuid
+  companyId String       @db.Uuid
+  code      String       @db.VarChar(32)
+  name      String       @db.VarChar(200)
+  status    BranchStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime     @updatedAt @db.Timestamptz(3)
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, code])
+  @@unique([companyId, id])
+  @@index([companyId, status])
+  @@map("branches")
+}

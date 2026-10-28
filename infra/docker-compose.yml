@@ -1,0 +1,23 @@
+name: pawnpilot
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pawnpilot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pawnpilot
+      POSTGRES_PASSWORD: pawnpilot_dev
+      POSTGRES_DB: pawnpilot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pawnpilot-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pawnpilot -d pawnpilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pawnpilot-postgres-data:

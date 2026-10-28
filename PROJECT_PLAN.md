@@ -6,13 +6,13 @@
 | Field | Value |
 |---|---|
 | Last updated | 2026-10-28 |
-| Current phase | **Phase 0 complete; Phase 1 not started** |
+| Current phase | **Phase 1 complete locally; awaiting review. Phase 2 not started.** |
 | Pilot customer | Jerome's Pawnshop (branch count and workflows to be verified) |
 | Repository | `\\wsl.localhost\Debian\home\zane\Projects\PawnPilot` |
-| Primary stack | Next.js 16 / React 19 / TypeScript / NestJS / PostgreSQL / Prisma |
+| Primary stack | Next.js 16 / React 19 / TypeScript 5.9 (web) · NestJS 12 ESM / TypeScript 6 (API) / PostgreSQL 17 / Prisma 6.19.3 |
 | Production posture | Web-first, online-first, multi-tenant SaaS |
 
-**Approval gate:** Phase 1 must not begin until the decisions in section 12 are confirmed. This document records the plan; it is not evidence that implementation has started.
+**Approval gate:** Phase 1 was approved and implemented. Phase 2 must not begin until Phase 1 is reviewed and the open decisions in sections 11 and 12 are confirmed. Phase 4 must not begin until the financial rules in section 7.1 are confirmed. Phase 1 verification is local; the GitHub Actions workflow has not run on a remote repository.
 
 ---
 
@@ -21,8 +21,8 @@
 | Phase | Status | Notes |
 |---|---|---|
 | Phase 0 — Discovery | **Complete** | Repository inspected; architecture, ERD, API map, role matrix, rules, and testing plan documented. |
-| Phase 1 — Foundation | **Not started** | Awaiting approval and the decisions in section 12. |
-| Phase 2 — Authentication and tenancy | Not started | Blocked by Phase 1. |
+| Phase 1 — Foundation | **Complete locally** | Monorepo, API, database, web shell, tests, and CI workflow implemented. Local gates pass; remote CI not yet run. Awaiting review. |
+| Phase 2 — Authentication and tenancy | Not started | Blocked by Phase 1 review and the open decisions in section 12. |
 | Phase 3 — Customers and items | Not started | Blocked by Phase 2. |
 | Phase 4 — Core pawn workflow | Not started | Blocked by Phase 3 and financial-rule confirmation. |
 | Phase 5 — Payments, renewals, redemption | Not started | Blocked by Phase 4. |
@@ -31,7 +31,7 @@
 | Phase 8 — Controlled rollout | Not started | Blocked by Phase 7. |
 | Phase 9 — SaaS readiness | Not started | Blocked by Phase 8. |
 
-Status legend: `Not started` · `In progress` · `Blocked` · `Complete` · `Deferred`.
+Status legend: `Not started` · `In progress` · `Blocked` · `Complete` · `Complete locally` · `Deferred`.
 
 ---
 
@@ -55,32 +55,32 @@ Initial scope is web-first and online-first. Offline operation, hardware integra
 
 ## 2. Repository assessment
 
-| Area | Finding |
+The Phase 0 baseline is preserved in git commit `d1b2437`. Current state after Phase 1:
+
+| Area | Current finding |
 |---|---|
-| Version control | **Not a git repository.** No baseline, rollback, or history. |
-| Application | Fresh `create-next-app` scaffold named `pawnpilot-init`. |
-| Framework | Next.js `16.4.3`, React `19.3.0`, App Router. |
-| Language | TypeScript `5.9.3`, `strict: true`. |
-| Styling | Tailwind CSS `4.3.3` via `@tailwindcss/turbopack`. |
-| Linting | ESLint `9.39.5` flat config. |
-| Backend | None. |
-| Database / ORM | None. |
-| Authentication | None. |
-| Tests / CI | None. No test script, test runner, or CI workflow. |
-| Source files | Only `app/layout.tsx`, `app/page.tsx`, `app/globals.css`; a "Hello world" page. |
+| Version control | Git repository on `main`. Baseline commit `d1b2437`; Phase 1 commit follows verification. |
+| Application | npm-workspaces monorepo: `apps/web`, `apps/api`, `packages/api-client`. |
+| Frontend | Next.js `16.4.3`, React `19.3.0`, App Router, Tailwind CSS `4.3.3`. |
+| Backend | NestJS `12.3.2` modular monolith, native ESM, port `3001`. |
+| Language | Web TypeScript `5.9.3`; API TypeScript `6.0.2`; both `strict: true`. |
+| Database / ORM | PostgreSQL `17`; Prisma `6.19.3`; initial migration applied. |
+| Authentication | Not implemented. Planned for Phase 2. |
+| Tests / CI | Vitest unit tests, API end-to-end tests, ESLint, Prettier, and GitHub Actions workflow. |
+| Source files | Foundation web shell, NestJS health/OpenAPI API, Prisma schema/migration/seed. |
+| Local database path | `infra/docker-compose.yml`; this WSL environment lacks the Compose plugin, so verification used `docker run postgres:17-alpine`. |
+| Baseline lint / build | Both pass inside WSL after Phase 1. |
 | Runtime | WSL Debian: Node `24.22.0`, npm `11.19.1`, Docker `26.1.5`, git `2.47.3`. |
-| Baseline lint | `npm run lint` **passed inside WSL**. |
-| Baseline build | Not run in Plan mode; it would write to `.next`. First Phase 1 gate. |
 
-Important constraints:
+Remaining constraints:
 
-1. **Greenfield.** No business logic, schema, or conventions to preserve. The main risk is structural.
-2. **Next.js 16 is materially different.** `AGENTS.md` warns that APIs and conventions differ; use the bundled docs at `node_modules/next/dist/docs/` before writing code.
-3. **Caching flags.** `next.config.ts` enables `cacheComponents` and `partialPrefetching`. For an authenticated financial app, these should be disabled for the pilot and revisited later.
-4. **WSL/UNC issue.** Running `npm` from Windows PowerShell on the UNC path fails because `CMD.EXE` cannot use UNC paths. Run all development commands inside WSL.
-5. **`.gitignore` issue.** `.env*` is ignored entirely, including a future `.env.example`. Phase 1 must add exceptions.
-6. **No git.** Initialize git and make a baseline commit before restructuring.
-7. **No test infrastructure.** Add linting, formatting, type checking, unit tests, integration tests, and CI in Phase 1.
+1. **Next.js 16 is materially different.** Use the bundled docs at `node_modules/next/dist/docs/` before changing routing, caching, or server behavior.
+2. **NestJS 12 is ESM-only.** API source uses `"type": "module"`, TypeScript `nodenext`, explicit `.js` extensions on relative imports, and Vitest. Do not introduce CommonJS-only test tooling.
+3. **WSL/UNC issue.** Running `npm` from Windows PowerShell on the UNC path fails because `CMD.EXE` cannot use UNC paths. Run all development commands inside WSL.
+4. **Prisma 6 is deliberately pinned.** Prisma 7's new contract/configuration format and driver adapters need a separate migration spike. The temporary `deepmerge-ts@8.0.2` override must be revisited with any Prisma upgrade.
+5. **Compose plugin may be absent.** The compose file is the documented path; environments without the plugin need it installed or an equivalent PostgreSQL container.
+6. **Remote CI is unverified.** The workflow exists, but no remote repository has executed it yet.
+7. **No authentication or financial data exists.** Phase 1 is infrastructure only.
 
 ---
 
@@ -111,16 +111,22 @@ One authoritative NestJS API and PostgreSQL database. The frontend never connect
 pawnpilot/
 ├── apps/
 │   ├── web/                 # Next.js 16 frontend
-│   └── api/                 # NestJS modular monolith
+│   │   ├── .env.example
+│   │   └── ...
+│   └── api/                 # NestJS 12 ESM modular monolith
+│       ├── prisma/          # schema, migrations, seed
+│       ├── src/
+│       ├── test/
+│       ├── .env.example
+│       └── ...
 ├── packages/
-│   └── api-client/          # generated OpenAPI client and types
+│   └── api-client/          # generated OpenAPI types
 ├── infra/
-│   ├── docker-compose.yml   # local PostgreSQL, optional MinIO/Redis
-│   └── deployment/          # later
+│   └── docker-compose.yml   # local PostgreSQL
 ├── docs/
-│   ├── adr/                 # architecture decision records
-│   └── reports/             # report definitions
-├── .env.example
+│   └── adr/                 # architecture decision records
+├── .github/workflows/ci.yml
+├── .nvmrc
 ├── package.json             # npm workspaces
 └── package-lock.json
 ```
@@ -129,22 +135,24 @@ Use **npm workspaces** because npm is installed and a lockfile exists. Avoid Tur
 
 ### 3.3 Stack decisions
 
-| Layer | Recommendation | Reason |
+| Layer | Position | Phase 1 status |
 |---|---|---|
-| Frontend | Next.js App Router + React + TypeScript | Existing scaffold; routing/layouts; React preferred. |
-| UI | Tailwind CSS + shadcn/ui (Radix primitives) | Accessible primitives, owned source, consistent forms/tables/dialogs. |
-| Server state | TanStack Query | Explicit loading, error, retry, caching, invalidation. |
-| Forms | React Hook Form + Zod | Good UX validation; backend remains authoritative. |
-| Tables | TanStack Table | Server-side pagination, sorting, filtering. |
-| API client | `openapi-typescript` + `openapi-fetch` | Types generated from the real API contract. |
-| Backend | NestJS modular monolith | Requested; clear boundaries, guards, validation, Swagger. |
-| Validation | `class-validator` + global `ValidationPipe` | Standard NestJS; whitelist and reject unknown fields. |
-| ORM | **Prisma** | Migrations, TypeScript types, `Decimal`, composite foreign keys. One ORM only. |
-| Database | PostgreSQL 17 locally; managed PostgreSQL in production | Numeric precision, transactions, constraints, RLS capability. |
-| Auth | Opaque server-side sessions, Argon2id, TOTP MFA, separate platform-admin realm | Immediate revocation; no JWT-in-localStorage; platform separation. |
-| Files | S3-compatible private bucket | Private ID documents/item photos; short-lived signed URLs. |
-| Jobs | Redis-backed queue in production | Async exports, email, cleanup; financial writes stay synchronous. |
-| API docs | OpenAPI generated from NestJS | Contract source for the generated web client. |
+| Frontend | Next.js `16.4.3` App Router + React `19.3.0` + TypeScript `5.9.3` | Implemented |
+| UI | Tailwind CSS `4.3.3` now; shadcn/ui (Radix primitives) in Phase 2 | Partially implemented |
+| Server state | TanStack Query | Planned for Phase 2+ |
+| Forms | React Hook Form + Zod | Planned for Phase 2+ |
+| Tables | TanStack Table | Planned for Phase 2+ |
+| API client | `openapi-typescript` + `openapi-fetch` | Package scaffolded; generation in Phase 2 |
+| Backend | NestJS `12.3.2` modular monolith, native ESM | Implemented |
+| Runtime | Node 24, npm 11, npm workspaces | Implemented |
+| Validation | `class-validator` + global `ValidationPipe` | Implemented |
+| ORM | Prisma `6.19.3` pinned; Prisma 7 migration is a separate spike | Implemented |
+| Database | PostgreSQL 17 locally; managed PostgreSQL in production | Implemented locally |
+| Auth | Opaque server-side sessions, Argon2id, TOTP MFA, separate platform-admin realm | Planned for Phase 2 |
+| Files | S3-compatible private bucket | Planned |
+| Jobs | Redis-backed queue in production | Planned |
+| API docs | OpenAPI generated from NestJS | Implemented |
+| Testing | Vitest + Supertest | Implemented |
 
 ### 3.4 Backend modules
 
@@ -238,16 +246,18 @@ app/
 
 Do not implement offline mode, a local sync engine, or direct hardware integrations until connectivity, printers, scanners, and cash-drawer requirements are verified.
 
-### 3.8 Architecture decisions pending approval
+### 3.8 Architecture decisions
 
-1. Monorepo with `apps/web`, `apps/api`, and generated `packages/api-client`.
-2. Next.js remains the React frontend; NestJS is the only backend.
-3. Prisma + PostgreSQL.
-4. Separate tenant-user and platform-admin authentication realms.
-5. Opaque server-side sessions in PostgreSQL, not JWT in browser storage.
-6. Same-origin API routing through the web domain.
-7. Disable Next `cacheComponents`/`partialPrefetching` for the pilot.
-8. App-level tenant authorization plus composite database foreign keys first; RLS as a tested backstop.
+1. **Implemented:** Monorepo with `apps/web`, `apps/api`, and `packages/api-client`.
+2. **Implemented:** Next.js remains the React frontend; NestJS is the only backend.
+3. **Implemented:** Prisma + PostgreSQL, with Prisma pinned to `6.19.3` for Phase 1.
+4. **Proposed for Phase 2:** Separate tenant-user and platform-admin authentication realms.
+5. **Proposed for Phase 2:** Opaque server-side sessions in PostgreSQL, not JWT in browser storage.
+6. **Implemented:** Same-origin API routing through the web domain.
+7. **Implemented:** Next `cacheComponents` and `partialPrefetching` are disabled for the pilot.
+8. **Proposed for Phase 2:** App-level tenant authorization plus composite database foreign keys first; RLS as a tested backstop.
+9. **Implemented:** NestJS 12 ESM runtime with TypeScript `nodenext` and Vitest.
+10. **Implemented:** Per-application environment files with committed `.env.example` templates.
 
 ---
 
@@ -358,11 +368,17 @@ This prevents a payment, ticket, or item from referencing another company's bran
 | `AUDIT_EVENT` | Append-only audit trail. |
 | `SUBSCRIPTION_PLAN`, `SUBSCRIPTION` | Manual platform subscription administration. |
 
+**Phase 1 implementation:** only `COMPANY` and `BRANCH` exist in the Prisma schema and initial
+migration. Every other entity above is planned and must not be treated as implemented.
+
 ---
 
 ## 5. API surface
 
 All business endpoints are under `/api/v1`. Health endpoints are outside the versioned API. The API is JSON-only, documented with OpenAPI, and generated into the web client.
+
+**Phase 1 implementation:** only `GET /api/v1` metadata and `GET /health/live` / `GET /health/ready`
+exist. The endpoint map below is the target design for later phases, not current behavior.
 
 | Module | Base path | Major endpoints |
 |---|---|---|
@@ -482,8 +498,8 @@ These must be answered before the related feature is built. Do not invent rates,
 
 | # | Area | Questions requiring confirmation | Needed by | Status |
 |---|---|---|---|---|
-| 1 | Company structure | Confirm actual branch count, legal entity or entities, whether all branches belong to one company tenant, and whether any branch is franchised or independently owned. | Phase 1 | Open |
-| 2 | Existing data | What system is used today: paper, Excel, or legacy software? What history must be migrated? Are there opening balances and existing ticket numbers? | Phase 1 | Open |
+| 1 | Company structure | Confirm actual branch count, legal entity or entities, whether all branches belong to one company tenant, and whether any branch is franchised or independently owned. | Before Phase 2 tenant provisioning | Open |
+| 2 | Existing data | What system is used today: paper, Excel, or legacy software? What history must be migrated? Are there opening balances and existing ticket numbers? | Before pilot migration / Phase 7 | Open |
 | 3 | Staff and identity | Which roles exist per branch: operator, cashier, appraiser, manager, guard? Do all staff have email addresses, or is username/phone login needed? Are devices shared? | Phase 2 | Open |
 | 4 | Approvals | Who approves high-value loans, voids, reversals, adjustments, cash variances, and financial settings changes? Can the same person request and approve? | Phase 2 | Open |
 | 5 | Financial products | Which pawn products exist: jewelry, gadgets, appliances, vehicles, others? What are the loan-to-value rules, minimum/maximum loans, appraisal authority, and item categories? | Phase 4 | Open |
@@ -576,6 +592,11 @@ The design must resist:
 | 9. Audit | Append-only events for authentication, role changes, financial state changes, sensitive reads, exports, and support access. |
 | 10. Monitoring | Alerts for repeated login failures, unusual export volume, permission changes, and backup failures. |
 
+**Phase 1 implemented only the infrastructure slice:** Helmet security headers, a CORS allowlist,
+global validation with unknown-field rejection, Pino structured logging with request IDs and
+redaction, and a consistent error envelope. Identity, sessions, authorization, RLS, audit, and
+monitoring remain future work.
+
 ### 8.3 Authentication and session details
 
 - Passwords are hashed with Argon2id using tuned parameters. Never store or log plaintext passwords.
@@ -665,7 +686,7 @@ If offline operation is required, it needs a separate approved design covering d
 | Phase | Deliverables | Exit criteria | Status |
 |---|---|---|---|
 | **0 — Discovery** | Repository inspection; architecture; ERD; API map; role matrix; risk list. | Direction approved. | **Complete** |
-| **1 — Foundation** | Initialize git and baseline commit; move scaffold to `apps/web`; create `apps/api`; npm workspaces; NestJS bootstrap; Prisma; PostgreSQL Docker Compose; env validation; logging and error envelope; health checks; OpenAPI; minimal web shell; lint/format/typecheck/test scripts; CI. | Lint, typecheck, unit smoke tests, and build pass in WSL; migration applies to an empty database; health/readiness work; OpenAPI generates; CI is green. No auth or financial features. | **Not started** |
+| **1 — Foundation** | Initialize git and baseline commit; move scaffold to `apps/web`; create `apps/api`; npm workspaces; NestJS bootstrap; Prisma; PostgreSQL Docker Compose; env validation; logging and error envelope; health checks; OpenAPI; minimal web shell; lint/format/typecheck/test scripts; CI. | Lint, typecheck, unit and end-to-end tests, and builds pass in WSL; migration applies to an empty database; health/readiness, OpenAPI, and the web proxy work; CI workflow exists. Remote CI run is pending. No auth or financial features. | **Complete locally** |
 | **2 — Authentication and tenancy** | Accounts, tenant users, platform admins, sessions, roles, permissions, branch assignments, company provisioning, owner invitation, MFA, rate limiting, audit events, tenant and branch guards. RLS spike and decision. | Two-company isolation tests pass; operators cannot use unassigned branches; disabled users lose access immediately; sessions revoke correctly; platform admins cannot read tenant financial data. | Not started |
 | **3 — Customers and items** | Customer records, identification records, duplicate review, notes, item categories, appraisal fields, private file uploads if approved. | Customer search/registration/update works; ID data is masked and audited; duplicate flags work; file access is private; permission and privacy tests pass. | Not started |
 | **4 — Core pawn workflow** | Confirmed financial rules; versioned pawn products; calculation module; quote endpoint; ticket and item creation; numbering; idempotency; state machine; print data; audit. | Owner validates calculations against anonymized real examples; ticket creation is atomic; numbering is concurrency-safe; retries do not duplicate; no silent deletion or editing. | Not started |
@@ -677,25 +698,63 @@ If offline operation is required, it needs a separate approved design covering d
 
 ### 9.1 Phase 1 task checklist
 
-- [ ] Explicit approval to begin Phase 1.
-- [ ] Initialize git repository.
-- [ ] Commit the current scaffold as the baseline.
-- [ ] Create `apps/web` and move the Next.js scaffold.
-- [ ] Create `apps/api` NestJS application.
-- [ ] Add root npm workspaces and scripts.
-- [ ] Add `.nvmrc` / Node version and `engines`.
-- [ ] Fix `.gitignore` for `.env.example`.
-- [ ] Add `.env.example` with variable names only.
-- [ ] Add Docker Compose PostgreSQL.
-- [ ] Add Prisma schema, initial migration, and seed structure.
-- [ ] Add NestJS config validation, logging, error filter, health checks, OpenAPI.
-- [ ] Add central security middleware and request IDs.
-- [ ] Add minimal responsive web shell.
-- [ ] Add same-origin `/api/v1` proxy and smoke test.
-- [ ] Add lint, format, typecheck, unit test, and migration check scripts.
-- [ ] Add CI workflow.
-- [ ] Run checks in WSL and record actual results.
-- [ ] Stop for review before Phase 2.
+- [x] Explicit approval to begin Phase 1.
+- [x] Initialize git repository.
+- [x] Commit the current scaffold as the baseline.
+- [x] Create `apps/web` and move the Next.js scaffold.
+- [x] Create `apps/api` NestJS application.
+- [x] Add root npm workspaces and scripts.
+- [x] Add `.nvmrc` / Node version and `engines`.
+- [x] Fix `.gitignore` for `.env.example`.
+- [x] Add per-application `.env.example` files with variable names only.
+- [x] Add Docker Compose PostgreSQL.
+- [x] Add Prisma schema, initial migration, and seed structure.
+- [x] Add NestJS config validation, logging, error filter, health checks, OpenAPI.
+- [x] Add central security middleware and request IDs.
+- [x] Add minimal responsive web shell.
+- [x] Add same-origin `/api/v1` proxy and smoke test.
+- [x] Add lint, format, typecheck, unit test, and migration check scripts.
+- [x] Add CI workflow. **Remote run pending.**
+- [x] Run checks in WSL and record actual results.
+- [x] Stop for review before Phase 2.
+
+### 9.2 Phase 1 verification record
+
+Run inside WSL on 2026-10-28 against PostgreSQL 17:
+
+```text
+npm ci                                      → passed, 0 vulnerabilities
+npm run format:check                        → passed
+npm run lint                                → passed
+npm run typecheck                           → passed
+npm run test                                → 7 tests passed (3 API, 4 web)
+npm run test:e2e                            → 3 tests passed
+npm run build                               → passed (NestJS + Next.js)
+npm run db:generate                         → passed
+npm run prisma:deploy -w @pawnpilot/api     → no pending migrations
+npm run db:seed                             → passed; 0 companies created
+```
+
+Runtime smoke checks:
+
+- `GET /health/live` → `200` with `status: ok`.
+- `GET /health/ready` → `200` with `database: up`.
+- `GET /api/v1` → `200` API metadata.
+- `GET /api/openapi.json` → `200` OpenAPI document.
+- `GET /api/docs` → `200` Swagger UI in development. Content security policy is disabled only in
+  development because Swagger is disabled in production.
+- `GET /` on the built web app → `200`; dashboard content present.
+- Web proxy to `/health/live` and `/api/v1` → `200`.
+
+Environment notes:
+
+- This WSL installation lacks the Docker Compose plugin. The committed Compose file was not used
+  for verification; an equivalent `docker run postgres:17-alpine` container was used instead.
+- The GitHub Actions workflow has not run on a remote repository. Do not claim remote CI is green.
+- Git commits currently use the placeholder author `PawnPilot Dev <dev@pawnpilot.local>` because no
+  global Git identity was configured. Replace it before shared or published history.
+- Prisma's vulnerable transitive `deepmerge-ts@7.1.5` is overridden to `8.0.2`; Prisma generate,
+  migrate deploy, and seed were re-run successfully with the override.
 
 ---
 
@@ -703,7 +762,7 @@ If offline operation is required, it needs a separate approved design covering d
 
 | Layer | Scope | Tooling |
 |---|---|---|
-| **Unit** | Financial calculations, rounding, maturity boundaries, renewal and overdue cases, numbering, state transitions, permission logic, date rules. | Jest for API; Vitest for web; deterministic clock; table-driven cases; property-based tests for decimal invariants. |
+| **Unit** | Financial calculations, rounding, maturity boundaries, renewal and overdue cases, numbering, state transitions, permission logic, date rules. | Vitest for API and web; deterministic clock; table-driven cases; property-based tests for decimal invariants. |
 | **Integration** | Real PostgreSQL, migrations, transactions, rollback, composite foreign keys, tenant isolation, branch authorization, idempotency, concurrency, audit atomicity. | Nest Testing module, Supertest, Testcontainers/CI PostgreSQL. Do not mock the database for critical flows. |
 | **Contract** | OpenAPI generation, generated client typecheck, breaking-change detection, response serialization. | Nest Swagger, `openapi-typescript`, CI diff. |
 | **End-to-end** | Login/logout, owner navigation, operator workflows, customer registration, ticket creation, payment, renewal, redemption, reports, exports, permission denials, mobile viewport, accessibility. | Playwright against seeded staging/test stack; axe checks. |
@@ -734,9 +793,9 @@ If offline operation is required, it needs a separate approved design covering d
 
 ### 10.3 Baseline and CI gates
 
-**Actual baseline:** no test suite exists yet. `npm run lint` passed inside WSL. No build or test result is claimed beyond that.
+**Actual baseline after Phase 1 (2026-10-28):** `npm ci` completed with zero vulnerabilities; format, lint, strict typecheck, 7 unit tests, 3 API end-to-end tests, both production builds, Prisma generation, migration deployment, the no-tenant seed, and runtime smoke checks passed inside WSL. Remote CI has not run yet.
 
-CI gates: lint, typecheck, unit tests, integration tests, build, migration check, OpenAPI contract check, dependency and secret scanning. E2E runs on pull requests or nightly depending on runtime.
+CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build, migration deployment, dependency audit, OpenAPI contract check, and secret scanning. Browser E2E, integration hardening, and isolation tests expand in later phases.
 
 ---
 
@@ -744,16 +803,16 @@ CI gates: lint, typecheck, unit tests, integration tests, build, migration check
 
 | ID | Decision | Recommendation / current position | Status | Owner |
 |---|---|---|---|---|
-| D-001 | Repository shape | Monorepo: `apps/web`, `apps/api`, `packages/api-client` | Proposed | You |
-| D-002 | Backend framework | NestJS modular monolith | Proposed | You |
-| D-003 | ORM and database | Prisma + PostgreSQL | Proposed | You |
-| D-004 | Frontend | Next.js 16 App Router as React frontend | Proposed | You |
-| D-005 | Authentication | Separate tenant/platform realms; opaque DB sessions; Argon2id; TOTP MFA | Proposed | You |
-| D-006 | API routing | Same-origin `/api/v1` through the web domain | Proposed | You |
-| D-007 | Frontend caching | Disable `cacheComponents` and `partialPrefetching` for pilot | Proposed | You |
-| D-008 | Tenant isolation | App authorization + composite FKs first; RLS spike in Phase 2 | Proposed | You |
-| D-009 | UI system | Tailwind + shadcn/ui + TanStack Query/Table + RHF/Zod | Proposed | You |
-| D-010 | Git baseline | Initialize git and commit scaffold before restructuring | Pending Phase 1 | You |
+| D-001 | Repository shape | Monorepo: `apps/web`, `apps/api`, `packages/api-client` | Implemented | You |
+| D-002 | Backend framework | NestJS 12 modular monolith | Implemented | You |
+| D-003 | ORM and database | Prisma `6.19.3` + PostgreSQL 17 | Implemented | You |
+| D-004 | Frontend | Next.js `16.4.3` App Router as React frontend | Implemented | You |
+| D-005 | Authentication | Separate tenant/platform realms; opaque DB sessions; Argon2id; TOTP MFA | Proposed for Phase 2 | You |
+| D-006 | API routing | Same-origin `/api/v1` through the web domain | Implemented | You |
+| D-007 | Frontend caching | Disable `cacheComponents` and `partialPrefetching` for pilot | Implemented | You |
+| D-008 | Tenant isolation | App authorization + composite FKs first; RLS spike in Phase 2 | Proposed for Phase 2 | You |
+| D-009 | UI system | Tailwind implemented; shadcn/ui + TanStack Query/Table + RHF/Zod planned | Partially implemented | You |
+| D-010 | Git baseline | Initialize git and commit scaffold before restructuring | Complete (`d1b2437`) | You |
 | D-011 | Deployment region | Singapore unless Philippine data-residency advice requires otherwise | Open | You |
 | D-012 | Staff identity | Email required vs username/phone login for branch staff | Open | You |
 | D-013 | Support access | Disable until a verified need; then time-limited, audited, read-only | Open | You |
@@ -762,32 +821,41 @@ CI gates: lint, typecheck, unit tests, integration tests, build, migration check
 | D-016 | Custom roles | Deferred; fixed system roles for pilot | Proposed | You |
 | D-017 | Cash sessions | Implement only if confirmed by workflow | Open | You |
 | D-018 | Hardware | Browser printing/scanner investigation before Phase 4/7 | Open | You |
+| D-019 | API runtime format | NestJS 12 native ESM, TypeScript `nodenext`, Vitest | Implemented | You |
+| D-020 | Prisma version | Pin `6.19.3`; override vulnerable `deepmerge-ts` to `8.0.2`; Prisma 7 spike later | Implemented | You |
+| D-021 | Environment layout | Per-app `.env` / `.env.local`; commit only `.env.example` | Implemented | You |
+| D-022 | Local database path | Commit Compose file; use direct `docker run` where Compose plugin is absent | Implemented | You |
+| D-023 | Git author identity | Placeholder `PawnPilot Dev <dev@pawnpilot.local>`; replace before publishing | Open | You |
 
 ---
 
-## 12. Phase 1 readiness checklist
+## 12. Phase 1 review and Phase 2 readiness
 
-- [x] Repository inspected.
-- [x] Baseline lint run in WSL.
-- [x] Architecture proposed.
-- [x] ERD proposed.
-- [x] API surface proposed.
-- [x] Role matrix proposed.
-- [x] Unresolved rules recorded.
-- [x] Security plan recorded.
-- [x] Testing strategy recorded.
-- [x] Project plan documented in this file.
-- [ ] Approve architecture defaults in section 3.8.
+### Phase 1 close-out
+
+- [x] Phase 1 approved and started.
+- [x] Git initialized and baseline commit created (`d1b2437`).
+- [x] Monorepo, API, database, web shell, and same-origin proxy implemented.
+- [x] Local format, lint, typecheck, unit, end-to-end, build, migration, and seed checks passed.
+- [x] Verification record added in section 9.2.
+- [x] Stopped for review before Phase 2.
+- [ ] Review Phase 1 and accept it for close-out.
+
+### Phase 2 decisions required before start
+
 - [ ] Confirm deployment target and region.
 - [ ] Confirm staff identity model (email vs username/phone).
 - [ ] Confirm support-access policy.
-- [ ] Confirm cash-session scope.
-- [ ] Confirm Phase 1 scope and acceptance criteria.
-- [ ] Initialize git (first Phase 1 task).
-- [ ] Create baseline commit.
-- [ ] Begin Phase 1.
+- [ ] Confirm actual company/branch structure and whether all branches belong to one tenant.
+- [ ] Confirm Phase 2 scope and acceptance criteria.
+- [ ] Replace the placeholder Git author identity before shared or published commits.
 
-**Phase 1 is not approved until the unchecked items above are resolved.**
+### Later decisions
+
+- [ ] Confirm cash-session scope before Phase 5.
+- [ ] Confirm all financial rules in section 7.1 before Phase 4.
+
+**Phase 1 is complete locally. Phase 2 is not approved until the unchecked Phase 2 items are resolved. Phase 4 remains blocked on the financial rules in section 7.1.**
 
 ---
 
@@ -796,13 +864,7 @@ CI gates: lint, typecheck, unit tests, integration tests, build, migration check
 All development commands should run inside WSL, not Windows PowerShell on the UNC path.
 
 ```powershell
-wsl -d Debian -- bash -lc "cd /home/zane/Projects/PawnPilot && npm run lint"
-```
-
-Baseline result:
-
-```text
-npm run lint  → passed (inside WSL)
+wsl -d Debian -- bash -lc "cd /home/zane/Projects/PawnPilot && npm ci"
 ```
 
 Local tooling:
@@ -811,11 +873,41 @@ Local tooling:
 Node 24.22.0 (WSL)
 npm 11.19.1 (WSL)
 Docker 26.1.5 (WSL)
+Docker Compose plugin: not installed in this WSL distro
 git 2.47.3 (WSL)
 psql: not installed on Windows; use Docker PostgreSQL or install the client in WSL
 ```
 
-Phase 1 will add the actual local database and test commands to this section.
+Local environment setup:
+
+```bash
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local
+npm run db:up          # requires the Docker Compose plugin
+npm run db:generate
+npm run db:migrate
+npm run dev
+```
+
+Verification commands:
+
+```bash
+npm run format:check
+npm run lint
+npm run typecheck
+npm run test
+npm run test:e2e
+npm run build
+npm run db:deploy
+npm run db:seed
+```
+
+Recorded result on 2026-10-28: all commands above passed inside WSL. The API and web production
+builds were also started and smoke-tested. `npm ci` reported zero vulnerabilities. See section 9.2
+for the exact test counts and runtime checks.
+
+The Compose file is committed at `infra/docker-compose.yml`. Because this WSL environment lacks the
+Compose plugin, Phase 1 verification used an equivalent `docker run postgres:17-alpine` container.
 
 ---
 
@@ -824,18 +916,23 @@ Phase 1 will add the actual local database and test commands to this section.
 | Date | Change |
 |---|---|
 | 2026-10-28 | Phase 0 completed. Repository inspected. Architecture, ERD, API map, role matrix, business-rule register, security plan, testing strategy, and phase checklist documented. Phase 1 not started. |
+| 2026-10-28 | Phase 1 completed locally and stopped for review. Initialized git and baseline `d1b2437`; created npm-workspaces monorepo; moved the Next.js app to `apps/web`; added NestJS 12 ESM API, Prisma 6.19.3 schema/migration/seed, PostgreSQL 17 Compose config, config validation, Pino request logging and IDs, security headers, error envelope, health checks, OpenAPI, web shell, same-origin proxy, Vitest unit/e2e tests, ESLint/Prettier/typecheck/build scripts, and GitHub Actions CI. Recorded: `npm ci` 0 vulnerabilities; 7 unit tests and 3 API e2e tests pass; builds, migration deploy, seed, and runtime smoke checks pass. Remote CI and Git identity remain open. |
 
 ---
 
 ## 15. Next step
 
-Review sections 3.8, 11, and 12. Once the Phase 1 decisions are approved, begin **only Phase 1**:
+Phase 1 is complete locally. Review sections 9.2, 11, and 12.
 
-1. Initialize git and commit the baseline.
-2. Restructure into the monorepo.
-3. Add NestJS, Prisma, PostgreSQL, configuration, logging, health checks, OpenAPI, and CI.
-4. Add the minimal web shell and verify the same-origin API proxy.
-5. Run lint, typecheck, unit tests, and migration checks in WSL.
-6. Report actual results and stop for review.
+If Phase 1 is accepted, confirm the Phase 2 decisions and explicitly approve Phase 2 before any
+authentication or tenancy code is written:
 
-Do not add authentication, customers, pawn tickets, or financial calculations in Phase 1.
+1. Deployment target and region.
+2. Staff identity model.
+3. Support-access policy.
+4. Actual company/branch structure and tenant boundaries.
+5. Phase 2 scope and acceptance criteria.
+6. Git author identity for shared commits.
+
+Do not begin Phase 2, add authentication, create tenant records, or add financial features yet.
+Do not begin Phase 4 until all financial rules in section 7.1 are confirmed.

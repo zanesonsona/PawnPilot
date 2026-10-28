@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pawnpilot
+          POSTGRES_PASSWORD: pawnpilot_dev
+          POSTGRES_DB: pawnpilot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pawnpilot -d pawnpilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      PORT: 3001
+      DATABASE_URL: postgresql://pawnpilot:pawnpilot_dev@localhost:5432/pawnpilot?schema=public
+      WEB_ORIGIN: http://localhost:3000
+      API_INTERNAL_URL: http://localhost:3001
+      LOG_LEVEL: silent
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Apply migrations
+        run: npm run db:deploy
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: API end-to-end tests
+        run: npm run test:e2e
+
+      - name: Build
+        run: npm run build
