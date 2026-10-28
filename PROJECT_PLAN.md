@@ -43,7 +43,8 @@ Initial goals:
 
 - Let a pawnshop owner monitor all authorized branches.
 - Let branch operators handle customer registration, appraisal, pawn transactions, payments, renewals, redemptions, receipts, and branch reports.
-- Let head-office staff manage users, settings, and consolidated reporting.
+- Let the tenant's Head Office Administrator manage branch users and branch access; let the Company
+  Owner manage company settings and consolidated reporting.
 - Keep each subscribing company's data isolated.
 - Let the SaaS operator manage subscriptions and platform health without casual access to tenant financial records.
 - Work on desktop and tablet, with a usable mobile layout.
@@ -421,7 +422,7 @@ exist. The endpoint map below is the target design for later phases, not current
 
 ## 6. Roles and permissions
 
-The platform administrator is a **separate principal**, not a tenant role. Tenant roles are company-scoped. Branch access is separate from permissions.
+The platform administrator is a **separate principal**, not a tenant role. Tenant roles are company-scoped. The **Head Office Administrator** is a tenant-level access administrator, not a platform administrator. Branch access is separate from permissions.
 
 Legend:
 
@@ -432,37 +433,39 @@ Legend:
 - **—** — no access.
 - **Support** — only through an approved, time-limited, audited support-access workflow.
 
-| Capability | Platform Administrator | Company Owner | Branch Operator | Guard |
-|---|---|---|---|---|
-| Provision companies, plans, subscriptions | Yes | — | — | — |
-| View platform health, usage counts, backup status | Yes | — | — | — |
-| View tenant metadata only | Yes | Own company | Own branch | — |
-| View customer records and financial transactions | — (except approved support access) | All | Assigned | — |
-| Manage company settings | — | Yes | — | — |
-| Create/manage branches | Initial provisioning only | Yes, within plan limits | — | — |
-| Invite/deactivate users | — | Yes | — | — |
-| Assign roles and branch access | — | Yes | — | — |
-| Create custom roles / edit permissions | — | Deferred; fixed roles initially | — | — |
-| Register/search customers | — | All | Assigned | — |
-| View full customer identification | — | Yes, audited | Masked; reveal only during verified workflow if approved | — |
-| Create pawn ticket/quote | — | All | Assigned | — |
-| Confirm/disburse standard ticket | — | All | Assigned | — |
-| Approve high-value ticket or override | — | Approval | Request only | — |
-| Record payment | — | All | Assigned | — |
-| Reverse payment | — | Approval | Request only | — |
-| Renew ticket | — | All | Assigned | — |
-| Redeem ticket / confirm collateral release | — | All | Assigned | — |
-| Void ticket after disbursement | — | Approval | — | — |
-| Record transaction adjustment | — | Approval | Request only | — |
-| Open/close cash session | — | All | Assigned, if enabled | — |
-| Approve cash variance | — | Approval | — | — |
-| View branch daily reports | — | All | Assigned | — |
-| View consolidated company reports | — | Yes | — | — |
-| Export reports / customer data | — | Yes, audited | Branch reports only, if approved | — |
-| View company audit trail | — | Yes | Own actions only, if approved | — |
-| View platform audit trail | Yes | — | — | — |
-| Approve support access to tenant data | Two-person rule | Company consent | — | — |
-| Visitor/incident records | — | — | — | Optional module only |
+| Capability | Platform Administrator | Company Owner | Head Office Administrator | Branch Operator | Guard |
+|---|---|---|---|---|---|
+| Provision companies, plans, subscriptions | Yes | — | — | — | — |
+| View platform health, usage counts, backup status | Yes | — | — | — | — |
+| View tenant metadata only | Yes | Own company | Own company | Own branch | — |
+| View customer records and financial transactions | — (except approved support access) | All | — by default | Assigned | — |
+| Manage company settings | — | Yes | — | — | — |
+| Create/manage branches | Initial provisioning only | Yes, within plan limits | — | — | — |
+| View staff directory and branch assignments | — | All | All | Own branch | — |
+| Invite/deactivate users | — | All tenant users | Branch users only | — | — |
+| Assign roles and branch access | — | All tenant users | Branch users only | — | — |
+| Reset branch-user passwords | — | Yes | Yes | — | — |
+| Create custom roles / edit permissions | — | Deferred; fixed roles initially | — | — | — |
+| Register/search customers | — | All | — | Assigned | — |
+| View full customer identification | — | Yes, audited | — | Masked; reveal only during verified workflow if approved | — |
+| Create pawn ticket/quote | — | All | — | Assigned | — |
+| Confirm/disburse standard ticket | — | All | — | Assigned | — |
+| Approve high-value ticket or override | — | Approval | — | Request only | — |
+| Record payment | — | All | — | Assigned | — |
+| Reverse payment | — | Approval | — | Request only | — |
+| Renew ticket | — | All | — | Assigned | — |
+| Redeem ticket / confirm collateral release | — | All | — | Assigned | — |
+| Void ticket after disbursement | — | Approval | — | — | — |
+| Record transaction adjustment | — | Approval | — | Request only | — |
+| Open/close cash session | — | All | — | Assigned, if enabled | — |
+| Approve cash variance | — | Approval | — | — | — |
+| View branch daily reports | — | All | — by default | Assigned | — |
+| View consolidated company reports | — | Yes | — by default | — | — |
+| Export reports / customer data | — | Yes, audited | — by default | Branch reports only, if approved | — |
+| View company audit trail | — | Yes | Access and user events only | Own actions only, if approved | — |
+| View platform audit trail | Yes | — | — | — | — |
+| Approve support access to tenant data | Two-person rule | Company consent | — | — | — |
+| Visitor/incident records | — | — | — | — | Optional module only |
 
 ### Permission families
 
@@ -486,9 +489,12 @@ Legend:
 2. Support access is a separate workflow, not a role. It requires a documented purpose, company consent or a two-person approval rule, a time limit, read-only access by default, and an audit event. It will not be built before the pilot unless a verified support need exists.
 3. High-risk actions require reason codes and approval: voids after disbursement, payment reversals, redemption reversals, financial settings changes, and large exports.
 4. Branch access is always checked separately from the permission. Having `payments.create` does not permit payment at an unassigned branch.
-5. System roles are fixed for the pilot. Owners can assign roles and branches. Custom role editing is deferred until the permission model has been used in practice.
-6. Disabled users and deactivated branches are rejected immediately, even if a session cookie is still present.
-7. Guard has no default financial access. If no system duty exists, the guard does not need an account.
+5. System roles are fixed for the pilot. Company Owners can assign roles and branches for all tenant users. Head Office Administrators can manage branch users only. Custom role editing is deferred until the permission model has been used in practice.
+6. The Head Office Administrator is a tenant role, not a platform role. It manages branch-user accounts, branch assignments, and branch-user password resets. It has no financial permissions by default; any reporting access must be confirmed separately.
+7. Only a Company Owner can deactivate or change the role of a Head Office Administrator. At least one active Company Owner must remain. A platform administrator may perform an emergency security disable only through an audited support/security procedure, not routine tenant administration.
+8. Disabled users and deactivated branches are rejected immediately, even if a session cookie is still present.
+9. Guard has no default financial access. If no system duty exists, the guard does not need an account.
+10. Head Office Administrators use email login; branch users use username login. MFA is recommended for Head Office Administrators because they can deactivate branch accounts.
 
 ---
 
@@ -500,7 +506,7 @@ These must be answered before the related feature is built. Do not invent rates,
 |---|---|---|---|---|
 | 1 | Company structure | Confirm actual branch count, legal entity or entities, whether all branches belong to one company tenant, and whether any branch is franchised or independently owned. | Before Phase 2 tenant provisioning | Open |
 | 2 | Existing data | What system is used today: paper, Excel, or legacy software? What history must be migrated? Are there opening balances and existing ticket numbers? | Before pilot migration / Phase 7 | Open |
-| 3 | Staff and identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and head-office users; unique username for branch users. Confirm head-office/branch role mapping, username scope (company-scoped vs global), branch password-reset path, username convention, and whether devices are shared. | Phase 2 | Partially answered |
+| 3 | Staff and identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and Head Office Administrators; unique username for branch users. Head Office Administrator is the tenant-level access manager, not a Platform Administrator. Confirm username scope (company-scoped vs global), branch password-reset path, username convention, number of Head Office Administrators, and whether devices are shared. | Phase 2 | Partially answered |
 | 4 | Approvals | Who approves high-value loans, voids, reversals, adjustments, cash variances, and financial settings changes? Can the same person request and approve? | Phase 2 | Open |
 | 5 | Financial products | Which pawn products exist: jewelry, gadgets, appliances, vehicles, others? What are the loan-to-value rules, minimum/maximum loans, appraisal authority, and item categories? | Phase 4 | Open |
 | 6 | Interest method | Is interest flat monthly, per annum, diminishing balance, advance/deducted, or another method? Provide the exact formula and at least three worked examples. | Phase 4 | Open |
@@ -814,7 +820,7 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 | D-009 | UI system | Tailwind implemented; shadcn/ui + TanStack Query/Table + RHF/Zod planned | Partially implemented | You |
 | D-010 | Git baseline | Initialize git and commit scaffold before restructuring | Complete (`d1b2437`) | You |
 | D-011 | Deployment region | Singapore unless Philippine data-residency advice requires otherwise | Open | You |
-| D-012 | Staff identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and head-office users; unique username for branch users; no company-issued email required. Immediate deactivation and server-side session revocation required for both. Open: role mapping, username scope, reset path, shared-device policy. | Accepted; policy details open | You |
+| D-012 | Staff identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and Head Office Administrators; unique username for branch users; no company-issued email required. Immediate deactivation and server-side session revocation required for both. Open: username scope, reset path, shared-device policy. | Accepted; policy details open | You |
 | D-013 | Support access | Disable until a verified need; then time-limited, audited, read-only | Open | You |
 | D-014 | Subscription model | Manual administration initially; no billing gateway | Proposed | You |
 | D-015 | Offline operation | Online-only initially; separate design if required | Proposed | You |
@@ -826,6 +832,7 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 | D-021 | Environment layout | Per-app `.env` / `.env.local`; commit only `.env.example` | Implemented | You |
 | D-022 | Local database path | Commit Compose file; use direct `docker run` where Compose plugin is absent | Implemented | You |
 | D-023 | Git author identity | Placeholder `PawnPilot Dev <dev@pawnpilot.local>`; replace before publishing | Open | You |
+| D-024 | Tenant administration role | The tenant-level "super admin" is the Head Office Administrator (`TENANT_ADMIN`), not the Platform Administrator. It manages branch users and branch assignments; the Company Owner manages Head Office Administrators. | Accepted | You |
 
 ---
 
@@ -845,9 +852,10 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 
 - [ ] Confirm deployment target and region.
 - [x] Confirm staff identity model: **hybrid email/username login accepted** (2026-10-28).
-- [ ] Confirm hybrid login policy details: head-office/branch role mapping, username scope
-  (company-scoped vs global), branch password-reset path, username convention, shared-device rules,
-  and MFA scope.
+- [x] Confirm tenant-level "super admin": **Head Office Administrator**, not Platform Administrator (2026-10-28).
+- [ ] Confirm number of Head Office Administrators per tenant and the owner continuity/backup process.
+- [ ] Confirm hybrid login policy details: username scope (company-scoped vs global), branch
+  password-reset path, username convention, shared-device rules, and MFA scope.
 - [ ] Confirm support-access policy.
 - [ ] Confirm actual company/branch structure and whether all branches belong to one tenant.
 - [ ] Confirm Phase 2 scope and acceptance criteria.
@@ -922,7 +930,8 @@ Compose plugin, Phase 1 verification used an equivalent `docker run postgres:17-
 | 2026-10-28 | Phase 0 completed. Repository inspected. Architecture, ERD, API map, role matrix, business-rule register, security plan, testing strategy, and phase checklist documented. Phase 1 not started. |
 | 2026-10-28 | Phase 1 completed locally and stopped for review. Initialized git and baseline `d1b2437`; created npm-workspaces monorepo; moved the Next.js app to `apps/web`; added NestJS 12 ESM API, Prisma 6.19.3 schema/migration/seed, PostgreSQL 17 Compose config, config validation, Pino request logging and IDs, security headers, error envelope, health checks, OpenAPI, web shell, same-origin proxy, Vitest unit/e2e tests, ESLint/Prettier/typecheck/build scripts, and GitHub Actions CI. Recorded: `npm ci` 0 vulnerabilities; 7 unit tests and 3 API e2e tests pass; builds, migration deploy, seed, and runtime smoke checks pass. Remote CI and Git identity remain open. |
 | 2026-10-28 | Phase 1 accepted and closed. Initial decision accepted email login for staff and owners. Recorded immediate deactivation/session revocation requirements in ADR 0002. Phase 2 remains not started pending the remaining decisions and explicit approval. |
-| 2026-10-28 | Revised staff login decision to a hybrid model: email for Platform Administrators, Company Owners, and head-office users; unique username for branch users. Renamed ADR 0002 to `0002-staff-login-identity.md` and recorded the open role-mapping, username-scope, and password-reset questions. |
+| 2026-10-28 | Revised staff login decision to a hybrid model: email for Platform Administrators, Company Owners, and head-office administrators; unique username for branch users. Renamed ADR 0002 to `0002-staff-login-identity.md` and recorded the open username-scope and password-reset questions. |
+| 2026-10-28 | Clarified that "super admin" means the tenant-level Head Office Administrator, not the Platform Administrator. Added the role to the role matrix with branch-user access administration only; the Company Owner manages Head Office Administrators and owns tenant continuity. |
 
 ---
 
@@ -934,13 +943,14 @@ Confirm the Phase 2 decisions and explicitly approve Phase 2 before any authenti
 code is written:
 
 1. Deployment target and region.
-2. Hybrid login policy details: head-office/branch role mapping, username scope and convention,
-   branch password-reset path, shared-device rules, and MFA scope.
-3. Support-access policy.
-4. Actual company/branch structure and tenant boundaries.
-5. Phase 2 scope and acceptance criteria.
-6. Git author identity for shared commits.
-7. Explicit approval to start Phase 2.
+2. Hybrid login policy details: username scope and convention, branch password-reset path,
+   shared-device rules, and MFA scope.
+3. Number of Head Office Administrators per tenant and owner continuity/backup process.
+4. Support-access policy.
+5. Actual company/branch structure and tenant boundaries.
+6. Phase 2 scope and acceptance criteria.
+7. Git author identity for shared commits.
+8. Explicit approval to start Phase 2.
 
 Do not begin Phase 2, add authentication, create tenant records, or add financial features yet.
 Do not begin Phase 4 until all financial rules in section 7.1 are confirmed.

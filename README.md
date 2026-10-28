@@ -34,8 +34,9 @@ production deployment exist yet.
 - **Database:** PostgreSQL 17 with Prisma 6.19.3
 - **API:** Versioned REST under `/api/v1`, OpenAPI at `/api/openapi.json`
 - **Tests:** Vitest for API and web; Supertest for API end-to-end checks
-- **Auth:** Planned for Phase 2; hybrid login accepted (email for privileged/head-office users,
-  username for branch users), with separate tenant/platform realms and opaque server-side sessions
+- **Auth:** Planned for Phase 2; hybrid login accepted (email for Platform Administrators, Company
+  Owners, and Head Office Administrators; username for branch users), with separate tenant/platform
+  realms and opaque server-side sessions
 
 ## Repository layout
 
@@ -151,8 +152,8 @@ recorded evidence for this phase.
 ## Open decisions before Phase 2
 
 - Deployment target and region.
-- Hybrid login policy: head-office/branch role mapping, username scope and convention, branch
-  password-reset path, shared-device rules, and MFA scope. See ADR 0002.
+- Hybrid login policy: username scope and convention, branch password-reset path, number of Head
+  Office Administrators, owner continuity/backup, shared-device rules, and MFA scope. See ADR 0002.
 - Support-access policy.
 - Cash-session scope.
 - Git author identity for future commits (the local repository currently uses a placeholder).

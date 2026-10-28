@@ -10,10 +10,13 @@ PawnPilot needs a staff identity model for the pilot and for the multi-tenant Sa
 proposal was email login for all staff. The owner revised that proposal because company-issued
 email mailboxes are an unnecessary recurring cost for branch users.
 
+The owner also clarified that the tenant-level "super admin" is the **Head Office Administrator**:
+the person who manages branch access and deactivates resigned branch employees. This is a tenant
+role, not a PawnPilot platform administrator.
+
 The revised model is a hybrid:
 
-- **Email login** for owners, platform administrators, and head-office users who need account
-  recovery and privileged access.
+- **Email login** for Platform Administrators, Company Owners, and Head Office Administrators.
 - **Username login** for branch-level users who do not need a company email mailbox.
 
 Email or username is only a login identifier. Access is controlled by the PawnPilot account status
@@ -26,90 +29,115 @@ approved.
 ## Decision
 
 1. **Use two login identifier classes.**
-   - Platform Administrators, Company Owners, and head-office users sign in with an email address.
+   - Platform Administrators, Company Owners, and Head Office Administrators sign in with an email
+     address.
    - Branch-level users sign in with a username. Branch users do not need an email address.
-   - The exact mapping of head-office and branch roles remains open. "Super admin" is treated as
-     the Platform Administrator for this decision.
 
-2. **Email login does not require a company-issued mailbox.** Owners and head-office users may use
-   an existing email address. A company-issued address remains optional and can be adopted later.
+2. **Use precise role names.**
+   - "Super admin" means the tenant-level **Head Office Administrator**, not the Platform
+     Administrator. The technical role is `TENANT_ADMIN`.
+   - The Platform Administrator is PawnPilot staff and remains a separate principal.
+   - The Company Owner is the highest tenant role and remains responsible for tenant continuity.
 
-3. **Proposed default: usernames are unique within a company, not globally.** The login flow must
+3. **Define tenant access authority.**
+   - A Head Office Administrator can create, deactivate, and reset branch-user accounts, assign
+     branch access, and remove a resigned branch employee immediately.
+   - A Company Owner can manage all tenant users, including Head Office Administrators.
+   - A Head Office Administrator cannot modify the Company Owner or another Head Office
+     Administrator.
+   - A Platform Administrator does not perform routine tenant user administration. An emergency
+     security disable must use an audited support/security procedure.
+   - At least one active Company Owner must remain. The number of Head Office Administrators per
+     tenant is still to be confirmed.
+
+4. **Email login does not require a company-issued mailbox.** Owners, Head Office Administrators,
+   and Platform Administrators may use an existing email address. A company-issued address remains
+   optional and can be adopted later.
+
+5. **Proposed default: usernames are unique within a company, not globally.** The login flow must
    resolve the company before authenticating a username. On a branch device, the company context
    can be preconfigured so staff only enter their username and password. A central login would need
    a company code or another tenant selector. This avoids collisions and impersonation across
    tenants. Confirm before implementation.
 
-4. **Normalize identifiers.**
+6. **Normalize identifiers.**
    - Trim and case-fold email addresses and usernames for comparison.
    - Email addresses must be unique across all email-login accounts.
    - Usernames must be unique within their company and must not contain `@`, so the login form can
      distinguish an email from a username.
    - Use a restricted username character set and reject visually confusing or reserved names.
 
-5. **Use one login field that accepts either identifier.** If the value contains `@`, treat it as an
+7. **Use one login field that accepts either identifier.** If the value contains `@`, treat it as an
    email; otherwise treat it as a username and apply the company context. The final login UX
    remains subject to confirmation.
 
-6. **Provision branch accounts without email.** An owner or authorized head-office user creates the
+8. **Provision branch accounts without email.** An owner or Head Office Administrator creates the
    branch account, assigns a unique username, and delivers a temporary password or one-time setup
    code in person or through an approved secure channel. The user must change the password at first
    login. Shared staff accounts are prohibited.
 
-7. **Password resets differ by account type.**
+9. **Password resets differ by account type.**
    - Email accounts use self-service password reset through a verified email address.
-   - Username accounts are reset by an owner or authorized head-office user, who issues a new
+   - Username accounts are reset by an owner or Head Office Administrator, who issues a new
      temporary password or one-time setup code. The reset must be rate-limited and audited.
    - A branch user may optionally add a verified recovery email later, but it is not required for
      the pilot.
 
-8. **Deactivation is the access-control action for both account types.** Disabling an account must
-   immediately:
-   - block new logins;
-   - revoke all active server-side sessions and refresh tokens;
-   - invalidate outstanding invitations, setup codes, and password-reset tokens;
-   - remove branch assignments as required; and
-   - write an audit event.
-   The block must apply on the next request, not when a token would otherwise expire.
+10. **Deactivation is the access-control action for both account types.** Disabling an account must
+    immediately:
+    - block new logins;
+    - revoke all active server-side sessions and refresh tokens;
+    - invalidate outstanding invitations, setup codes, and password-reset tokens;
+    - remove branch assignments as required; and
+    - write an audit event.
+    The block must apply on the next request, not when a token would otherwise expire.
 
-9. **Do not reuse a username for a different person.** Usernames are assigned to one person and
-   retained with the deactivated account for audit history. Renaming a username requires an
-   authorized action and an audit event. A new employee receives a new account.
+11. **Do not reuse a username for a different person.** Usernames are assigned to one person and
+    retained with the deactivated account for audit history. Renaming a username requires an
+    authorized action and an audit event. A new employee receives a new account.
 
-10. **Keep MFA in the Phase 2 security design.** D-005 proposes TOTP MFA. The recommended default
-    is to require it for Platform Administrators and Company Owners; head-office and branch-user
-    requirements remain a Phase 2 decision.
+12. **Keep MFA in the Phase 2 security design.** D-005 proposes TOTP MFA. The recommended default is
+    to require it for Platform Administrators, Company Owners, and Head Office Administrators;
+    branch-user requirements remain a Phase 2 decision.
 
-11. **Defer SSO.** Google Workspace or Microsoft 365 single sign-on can be added later for email
+13. **Defer SSO.** Google Workspace or Microsoft 365 single sign-on can be added later for email
     accounts. It is not required for branch usernames.
 
-12. **Do not rely on an email provider for offboarding.** The PawnPilot offboarding procedure must
+14. **Do not rely on an email provider for offboarding.** The PawnPilot offboarding procedure must
     deactivate the account and revoke sessions for both email and username accounts.
 
 ## Open policy questions
 
-- Which roles are "head office" and which are "branch"? The current role matrix lists Platform
-  Administrator, Company Owner, Branch Operator, and Guard; additional head-office roles need to be
-  defined if they exist.
+- How many Head Office Administrators should a tenant have? More than one reduces the risk of a
+  single point of failure, but each additional account is another privileged identity.
+- Who becomes the backup administrator if the Company Owner is unavailable? The owner continuity
+  and account-recovery process still needs to be defined.
 - Should usernames be company-scoped with a company code/tenant selector, or globally unique for
   simplicity? The proposed default is company-scoped.
-- Should branch password resets be owner/head-office-initiated, or should the system issue one-time
-  recovery codes? The proposed default is owner/head-office-initiated.
+- Should branch password resets be owner/Head Office Administrator-initiated, or should the system
+  issue one-time recovery codes? The proposed default is administrator-initiated.
 - Should usernames be based on employee IDs, names, or another convention? Who may change them?
+- Should the Head Office Administrator see branch or consolidated financial reports? The current
+  role matrix gives this role no financial access by default; any reporting access must be
+  confirmed separately.
 - Are branch devices shared? If yes, use a short idle timeout and do not offer persistent
   "remember me" sessions on shared devices.
-- Which head-office and branch roles require MFA?
+- Which branch roles require MFA?
 - Do branch users need an optional recovery email or phone number for account recovery?
 
 ## Consequences
 
 - Branch onboarding does not require a company email mailbox, reducing cost and administrative
   overhead.
+- The tenant needs a clear owner continuity plan because only the Company Owner can manage Head
+  Office Administrators.
 - The system needs a tenant-resolution step for username login and safe company-scoped username
   generation.
-- Username accounts create more password-reset work for owners and head-office administrators.
-- Email delivery is still required for owner/head-office invitations and password resets.
+- Username accounts create more password-reset work for owners and Head Office Administrators.
+- Email delivery is still required for owner and Head Office Administrator invitations and password
+  resets.
 - Immediate deactivation and session revocation remain mandatory for every account type.
+- The Head Office Administrator cannot perform platform-wide actions or access another tenant.
 - A suspended company mailbox does not by itself revoke a PawnPilot session.
 
 ## Verification
