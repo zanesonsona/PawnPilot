@@ -2,14 +2,15 @@
 
 Multi-tenant pawnshop management SaaS for the Philippine market.
 
-**Current status:** Phase 0 (Discovery) is complete. Phase 1 (Foundation) is complete locally and
-awaiting review. Phase 2 (Authentication and tenancy) has **not** started.
+**Current status:** Phase 0 (Discovery) and Phase 1 (Foundation) are complete. Phase 1 was accepted
+on 2026-10-28. Phase 2 (Authentication and tenancy) has **not** started.
 
 The authoritative architecture, data model, API plan, role matrix, unresolved business rules,
 security plan, testing strategy, decisions, phase checklist, and verification results are in:
 
 - [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)
 - [`docs/adr/0001-foundation-stack.md`](./docs/adr/0001-foundation-stack.md)
+- [`docs/adr/0002-staff-email-login.md`](./docs/adr/0002-staff-email-login.md)
 
 ## What Phase 1 delivered
 
@@ -33,7 +34,8 @@ production deployment exist yet.
 - **Database:** PostgreSQL 17 with Prisma 6.19.3
 - **API:** Versioned REST under `/api/v1`, OpenAPI at `/api/openapi.json`
 - **Tests:** Vitest for API and web; Supertest for API end-to-end checks
-- **Auth:** Planned for Phase 2; separate tenant/platform realms with opaque server-side sessions
+- **Auth:** Planned for Phase 2; email login accepted, with separate tenant/platform realms and
+  opaque server-side sessions
 
 ## Repository layout
 
@@ -149,7 +151,8 @@ recorded evidence for this phase.
 ## Open decisions before Phase 2
 
 - Deployment target and region.
-- Staff identity model: email versus username/phone.
+- Email login policy: company-issued email requirement, global email uniqueness, and shared-device
+  rules. See ADR 0002.
 - Support-access policy.
 - Cash-session scope.
 - Git author identity for future commits (the local repository currently uses a placeholder).

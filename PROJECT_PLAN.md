@@ -6,13 +6,13 @@
 | Field | Value |
 |---|---|
 | Last updated | 2026-10-28 |
-| Current phase | **Phase 1 complete locally; awaiting review. Phase 2 not started.** |
+| Current phase | **Phase 1 complete and accepted. Phase 2 not started.** |
 | Pilot customer | Jerome's Pawnshop (branch count and workflows to be verified) |
 | Repository | `\\wsl.localhost\Debian\home\zane\Projects\PawnPilot` |
 | Primary stack | Next.js 16 / React 19 / TypeScript 5.9 (web) · NestJS 12 ESM / TypeScript 6 (API) / PostgreSQL 17 / Prisma 6.19.3 |
 | Production posture | Web-first, online-first, multi-tenant SaaS |
 
-**Approval gate:** Phase 1 was approved and implemented. Phase 2 must not begin until Phase 1 is reviewed and the open decisions in sections 11 and 12 are confirmed. Phase 4 must not begin until the financial rules in section 7.1 are confirmed. Phase 1 verification is local; the GitHub Actions workflow has not run on a remote repository.
+**Approval gate:** Phase 1 is complete and accepted. Phase 2 must not begin until the remaining open decisions in sections 11 and 12 are confirmed and Phase 2 is explicitly approved. Phase 4 must not begin until the financial rules in section 7.1 are confirmed. Phase 1 verification is local; the GitHub Actions workflow has not run on a remote repository.
 
 ---
 
@@ -21,8 +21,8 @@
 | Phase | Status | Notes |
 |---|---|---|
 | Phase 0 — Discovery | **Complete** | Repository inspected; architecture, ERD, API map, role matrix, rules, and testing plan documented. |
-| Phase 1 — Foundation | **Complete locally** | Monorepo, API, database, web shell, tests, and CI workflow implemented. Local gates pass; remote CI not yet run. Awaiting review. |
-| Phase 2 — Authentication and tenancy | Not started | Blocked by Phase 1 review and the open decisions in section 12. |
+| Phase 1 — Foundation | **Complete** | Accepted 2026-10-28. Monorepo, API, database, web shell, tests, and CI workflow implemented. Local gates pass; remote CI not yet run. |
+| Phase 2 — Authentication and tenancy | Not started | Blocked by the open decisions in section 12 and explicit Phase 2 approval. |
 | Phase 3 — Customers and items | Not started | Blocked by Phase 2. |
 | Phase 4 — Core pawn workflow | Not started | Blocked by Phase 3 and financial-rule confirmation. |
 | Phase 5 — Payments, renewals, redemption | Not started | Blocked by Phase 4. |
@@ -500,7 +500,7 @@ These must be answered before the related feature is built. Do not invent rates,
 |---|---|---|---|---|
 | 1 | Company structure | Confirm actual branch count, legal entity or entities, whether all branches belong to one company tenant, and whether any branch is franchised or independently owned. | Before Phase 2 tenant provisioning | Open |
 | 2 | Existing data | What system is used today: paper, Excel, or legacy software? What history must be migrated? Are there opening balances and existing ticket numbers? | Before pilot migration / Phase 7 | Open |
-| 3 | Staff and identity | Which roles exist per branch: operator, cashier, appraiser, manager, guard? Do all staff have email addresses, or is username/phone login needed? Are devices shared? | Phase 2 | Open |
+| 3 | Staff and identity | Email login accepted. Confirm whether company-issued email is mandatory or any email is allowed, whether one email may belong to multiple company tenants, which roles exist per branch (operator, cashier, appraiser, manager, guard), and whether devices are shared. | Phase 2 | Partially answered |
 | 4 | Approvals | Who approves high-value loans, voids, reversals, adjustments, cash variances, and financial settings changes? Can the same person request and approve? | Phase 2 | Open |
 | 5 | Financial products | Which pawn products exist: jewelry, gadgets, appliances, vehicles, others? What are the loan-to-value rules, minimum/maximum loans, appraisal authority, and item categories? | Phase 4 | Open |
 | 6 | Interest method | Is interest flat monthly, per annum, diminishing balance, advance/deducted, or another method? Provide the exact formula and at least three worked examples. | Phase 4 | Open |
@@ -814,7 +814,7 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 | D-009 | UI system | Tailwind implemented; shadcn/ui + TanStack Query/Table + RHF/Zod planned | Partially implemented | You |
 | D-010 | Git baseline | Initialize git and commit scaffold before restructuring | Complete (`d1b2437`) | You |
 | D-011 | Deployment region | Singapore unless Philippine data-residency advice requires otherwise | Open | You |
-| D-012 | Staff identity | Email required vs username/phone login for branch staff | Open | You |
+| D-012 | Staff identity | Email login accepted for staff and owners; one login account per person; company-issued email preferred; immediate account deactivation and server-side session revocation required. Open: company-email requirement, global uniqueness, shared-device policy. | Accepted; policy details open | You |
 | D-013 | Support access | Disable until a verified need; then time-limited, audited, read-only | Open | You |
 | D-014 | Subscription model | Manual administration initially; no billing gateway | Proposed | You |
 | D-015 | Offline operation | Online-only initially; separate design if required | Proposed | You |
@@ -839,15 +839,18 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 - [x] Local format, lint, typecheck, unit, end-to-end, build, migration, and seed checks passed.
 - [x] Verification record added in section 9.2.
 - [x] Stopped for review before Phase 2.
-- [ ] Review Phase 1 and accept it for close-out.
+- [x] Review Phase 1 and accept it for close-out (2026-10-28).
 
 ### Phase 2 decisions required before start
 
 - [ ] Confirm deployment target and region.
-- [ ] Confirm staff identity model (email vs username/phone).
+- [x] Confirm staff identity model: **email login accepted** (2026-10-28).
+- [ ] Confirm email login policy details: company-issued email requirement, global uniqueness,
+  shared-device rules, and transactional email provider.
 - [ ] Confirm support-access policy.
 - [ ] Confirm actual company/branch structure and whether all branches belong to one tenant.
 - [ ] Confirm Phase 2 scope and acceptance criteria.
+- [ ] Explicitly approve Phase 2 after the decisions above are resolved.
 - [ ] Replace the placeholder Git author identity before shared or published commits.
 
 ### Later decisions
@@ -855,7 +858,7 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 - [ ] Confirm cash-session scope before Phase 5.
 - [ ] Confirm all financial rules in section 7.1 before Phase 4.
 
-**Phase 1 is complete locally. Phase 2 is not approved until the unchecked Phase 2 items are resolved. Phase 4 remains blocked on the financial rules in section 7.1.**
+**Phase 1 is complete and accepted. Phase 2 is not approved until the unchecked Phase 2 items are resolved and Phase 2 is explicitly approved. Phase 4 remains blocked on the financial rules in section 7.1.**
 
 ---
 
@@ -917,22 +920,25 @@ Compose plugin, Phase 1 verification used an equivalent `docker run postgres:17-
 |---|---|
 | 2026-10-28 | Phase 0 completed. Repository inspected. Architecture, ERD, API map, role matrix, business-rule register, security plan, testing strategy, and phase checklist documented. Phase 1 not started. |
 | 2026-10-28 | Phase 1 completed locally and stopped for review. Initialized git and baseline `d1b2437`; created npm-workspaces monorepo; moved the Next.js app to `apps/web`; added NestJS 12 ESM API, Prisma 6.19.3 schema/migration/seed, PostgreSQL 17 Compose config, config validation, Pino request logging and IDs, security headers, error envelope, health checks, OpenAPI, web shell, same-origin proxy, Vitest unit/e2e tests, ESLint/Prettier/typecheck/build scripts, and GitHub Actions CI. Recorded: `npm ci` 0 vulnerabilities; 7 unit tests and 3 API e2e tests pass; builds, migration deploy, seed, and runtime smoke checks pass. Remote CI and Git identity remain open. |
+| 2026-10-28 | Phase 1 accepted and closed. Accepted email login for staff and owners. Recorded immediate deactivation/session revocation requirements and open email-policy details in ADR 0002. Phase 2 remains not started pending the remaining decisions and explicit approval. |
 
 ---
 
 ## 15. Next step
 
-Phase 1 is complete locally. Review sections 9.2, 11, and 12.
+Phase 1 is complete and accepted. Review the remaining decisions in sections 11 and 12.
 
-If Phase 1 is accepted, confirm the Phase 2 decisions and explicitly approve Phase 2 before any
-authentication or tenancy code is written:
+Confirm the Phase 2 decisions and explicitly approve Phase 2 before any authentication or tenancy
+code is written:
 
 1. Deployment target and region.
-2. Staff identity model.
+2. Email login policy details: company-issued requirement, global uniqueness, shared-device rules,
+   and transactional email provider.
 3. Support-access policy.
 4. Actual company/branch structure and tenant boundaries.
 5. Phase 2 scope and acceptance criteria.
 6. Git author identity for shared commits.
+7. Explicit approval to start Phase 2.
 
 Do not begin Phase 2, add authentication, create tenant records, or add financial features yet.
 Do not begin Phase 4 until all financial rules in section 7.1 are confirmed.
