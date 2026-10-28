@@ -2,15 +2,22 @@
 
 @theme {
   --color-canvas: #f3f6f2;
+  --color-paper: #f7f3e8;
   --color-surface: #ffffff;
   --color-ink: #14211a;
   --color-muted: #5d6b62;
   --color-line: #d9e2da;
+  --color-rule: #d8d2c2;
   --color-brand: #0f5c45;
   --color-brand-strong: #0a4534;
   --color-brand-soft: #e3efe8;
+  --color-forest: #10251c;
   --color-accent: #c8872c;
+  --color-brass: #c8872c;
+  --color-brass-soft: #f0dfbd;
   --font-sans: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 :root {
@@ -57,4 +64,40 @@ textarea {
 ::selection {
   background: var(--color-brand-soft);
   color: var(--color-brand-strong);
+}
+
+.auth-rail {
+  background:
+    radial-gradient(circle at 12% 8%, rgb(200 135 44 / 20%), transparent 24rem),
+    linear-gradient(145deg, #10251c 0%, #0a1d15 100%);
+}
+
+.auth-rail::after {
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0, transparent 47px, rgb(255 255 255 / 3%) 48px),
+    repeating-linear-gradient(0deg, transparent 0, transparent 47px, rgb(255 255 255 / 2%) 48px);
+  content: "";
+  pointer-events: none;
+}
+
+.ledger-lines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 31px,
+    rgb(20 33 26 / 4%) 32px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

@@ -32,6 +32,7 @@ jobs:
       WEB_ORIGIN: http://localhost:3000
       API_INTERNAL_URL: http://localhost:3001
       LOG_LEVEL: silent
+      MFA_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
 
     steps:
       - name: Checkout
@@ -51,6 +52,9 @@ jobs:
 
       - name: Apply migrations
         run: npm run db:deploy
+
+      - name: RLS spike
+        run: npm run test:rls
 
       - name: Check formatting
         run: npm run format:check

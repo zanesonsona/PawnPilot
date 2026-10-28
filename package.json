@@ -19,6 +19,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @pawnpilot/api",
+    "test:rls": "npm run test:rls -w @pawnpilot/api",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:up": "docker compose -f infra/docker-compose.yml up -d",
@@ -43,6 +44,7 @@
     "esbuild@0.28.2": true,
     "unrs-resolver@1.12.2": true,
     "@parcel/watcher@2.6.0": true,
+    "argon2@0.44.0": true,
     "@scarf/scarf": false
   }
 }

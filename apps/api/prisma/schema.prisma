@@ -1,5 +1,5 @@
-// Phase 1 foundation only.
-// Authentication, users, customers, and pawn transaction models arrive in Phase 2+.
+// Phase 2 authentication and tenancy schema.
+// Customer, pawn-ticket, payment, and other financial models remain future phases.
 
 generator client {
   provider = "prisma-client-js"
@@ -21,32 +21,228 @@ enum BranchStatus {
   INACTIVE
 }
 
+enum AccountType {
+  PLATFORM_ADMIN
+  TENANT_USER
+}
+
+enum AccountStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum UserRole {
+  COMPANY_OWNER
+  HEAD_OFFICE_ADMIN
+  BRANCH_OPERATOR
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum MfaChallengePurpose {
+  LOGIN
+  SETUP
+}
+
 model Company {
-  id        String        @id @default(uuid()) @db.Uuid
-  name      String        @db.VarChar(200)
-  slug      String        @unique @db.VarChar(80)
-  status    CompanyStatus @default(ACTIVE)
-  timezone  String        @default("Asia/Manila") @db.VarChar(64)
-  currency  String        @default("PHP") @db.Char(3)
-  createdAt DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
-  branches  Branch[]
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String        @db.VarChar(200)
+  slug         String        @unique @db.VarChar(80)
+  status       CompanyStatus @default(ACTIVE)
+  timezone     String        @default("Asia/Manila") @db.VarChar(64)
+  currency     String        @default("PHP") @db.Char(3)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+  branches     Branch[]
+  accounts     Account[]
+  users        User[]
+  userBranches UserBranch[]
+  invitations  Invitation[]
+  auditEvents  AuditEvent[]
 
   @@map("companies")
 }
 
 model Branch {
-  id        String       @id @default(uuid()) @db.Uuid
-  companyId String       @db.Uuid
-  code      String       @db.VarChar(32)
-  name      String       @db.VarChar(200)
-  status    BranchStatus @default(ACTIVE)
-  createdAt DateTime     @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime     @updatedAt @db.Timestamptz(3)
-  company   Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  id           String       @id @default(uuid()) @db.Uuid
+  companyId    String       @db.Uuid
+  code         String       @db.VarChar(32)
+  name         String       @db.VarChar(200)
+  status       BranchStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime     @updatedAt @db.Timestamptz(3)
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  userBranches UserBranch[]
 
   @@unique([companyId, code])
   @@unique([companyId, id])
   @@index([companyId, status])
   @@map("branches")
+}
+
+model Account {
+  id                        String               @id @default(uuid()) @db.Uuid
+  type                      AccountType
+  status                    AccountStatus        @default(INVITED)
+  email                     String?              @unique @db.VarChar(320)
+  username                  String?              @db.VarChar(64)
+  companyId                 String?              @db.Uuid
+  displayName               String               @db.VarChar(200)
+  passwordHash              String?              @db.VarChar(255)
+  mustChangePassword        Boolean              @default(false)
+  mfaEnabled                Boolean              @default(false)
+  mfaSecretEncrypted        String?              @db.Text
+  mfaPendingSecretEncrypted String?              @db.Text
+  failedLoginAttempts       Int                  @default(0)
+  lockedUntil               DateTime?            @db.Timestamptz(3)
+  lastLoginAt               DateTime?            @db.Timestamptz(3)
+  createdAt                 DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime             @updatedAt @db.Timestamptz(3)
+  company                   Company?             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user                      User?
+  sessions                  Session[]
+  mfaChallenges             MfaChallenge[]
+  mfaRecoveryCodes          MfaRecoveryCode[]
+  passwordResetTokens       PasswordResetToken[]
+  sentInvitations           Invitation[]         @relation("InvitationInviter")
+  auditEvents               AuditEvent[]         @relation("AuditActor")
+
+  @@unique([companyId, username])
+  @@unique([companyId, id])
+  @@index([companyId, status])
+  @@index([type, status])
+  @@map("accounts")
+}
+
+model User {
+  id                String       @id @default(uuid()) @db.Uuid
+  companyId         String       @db.Uuid
+  accountId         String       @unique @db.Uuid
+  firstName         String       @db.VarChar(100)
+  lastName          String       @db.VarChar(100)
+  role              UserRole
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(3)
+  company           Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  account           Account      @relation(fields: [companyId, accountId], references: [companyId, id], onDelete: Cascade)
+  branchAssignments UserBranch[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, accountId])
+  @@index([companyId, role])
+  @@map("users")
+}
+
+model UserBranch {
+  companyId String   @db.Uuid
+  userId    String   @db.Uuid
+  branchId  String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user      User     @relation(fields: [companyId, userId], references: [companyId, id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [companyId, branchId], references: [companyId, id], onDelete: Cascade)
+
+  @@id([companyId, userId, branchId])
+  @@index([companyId, branchId])
+  @@map("user_branches")
+}
+
+model Session {
+  id         String    @id @default(uuid()) @db.Uuid
+  accountId  String    @db.Uuid
+  tokenHash  String    @unique @db.VarChar(64)
+  expiresAt  DateTime  @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  lastSeenAt DateTime  @default(now()) @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  ipAddress  String?   @db.VarChar(64)
+  userAgent  String?   @db.VarChar(512)
+  account    Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, revokedAt])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model MfaChallenge {
+  id         String              @id @default(uuid()) @db.Uuid
+  accountId  String              @db.Uuid
+  purpose    MfaChallengePurpose @default(LOGIN)
+  tokenHash  String              @unique @db.VarChar(64)
+  expiresAt  DateTime            @db.Timestamptz(3)
+  consumedAt DateTime?           @db.Timestamptz(3)
+  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
+  account    Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, consumedAt])
+  @@map("mfa_challenges")
+}
+
+model MfaRecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @db.Uuid
+  codeHash  String    @unique @db.VarChar(64)
+  usedAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, usedAt])
+  @@map("mfa_recovery_codes")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  accountId  String    @db.Uuid
+  tokenHash  String    @unique @db.VarChar(64)
+  expiresAt  DateTime  @db.Timestamptz(3)
+  consumedAt DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  account    Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, consumedAt])
+  @@map("password_reset_tokens")
+}
+
+model Invitation {
+  id                 String           @id @default(uuid()) @db.Uuid
+  companyId          String           @db.Uuid
+  email              String           @db.VarChar(320)
+  role               UserRole
+  tokenHash          String           @unique @db.VarChar(64)
+  status             InvitationStatus @default(PENDING)
+  expiresAt          DateTime         @db.Timestamptz(3)
+  acceptedAt         DateTime?        @db.Timestamptz(3)
+  createdByAccountId String?          @db.Uuid
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+  company            Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdBy          Account?         @relation("InvitationInviter", fields: [createdByAccountId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([email, status])
+  @@map("invitations")
+}
+
+model AuditEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  companyId      String?  @db.Uuid
+  actorAccountId String?  @db.Uuid
+  action         String   @db.VarChar(100)
+  entityType     String   @db.VarChar(80)
+  entityId       String?  @db.VarChar(120)
+  metadata       Json?
+  ipAddress      String?  @db.VarChar(64)
+  userAgent      String?  @db.VarChar(512)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  company        Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  actor          Account? @relation("AuditActor", fields: [actorAccountId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@index([actorAccountId, createdAt])
+  @@map("audit_events")
 }

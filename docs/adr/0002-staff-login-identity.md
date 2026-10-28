@@ -1,8 +1,8 @@
 # ADR 0002: Staff Login Identity and Account Lifecycle
 
-- **Status:** Accepted; policy details open
+- **Status:** Accepted; implemented in Phase 2
 - **Date:** 2026-10-28
-- **Phase:** 2 — Authentication and tenancy (decision only; not implemented)
+- **Phase:** 2 — Authentication and tenancy
 
 ## Context
 
@@ -35,7 +35,7 @@ approved.
 
 2. **Use precise role names.**
    - "Super admin" means the tenant-level **Head Office Administrator**, not the Platform
-     Administrator. The technical role is `TENANT_ADMIN`.
+     Administrator. The implemented technical role is `HEAD_OFFICE_ADMIN`.
    - The Platform Administrator is PawnPilot staff and remains a separate principal.
    - The Company Owner is the highest tenant role and remains responsible for tenant continuity.
 
@@ -140,7 +140,21 @@ approved.
 - The Head Office Administrator cannot perform platform-wide actions or access another tenant.
 - A suspended company mailbox does not by itself revoke a PawnPilot session.
 
-## Verification
+## Implementation record
 
-Not implemented. No authentication, session, invitation, username, or email-delivery code exists
-yet. This ADR is a decision record only.
+Implemented in Phase 2 on 2026-10-29:
+
+- Separate platform and tenant login endpoints and authorization realms.
+- Email login for Platform Administrators, Company Owners, and Head Office Administrators.
+- Company-scoped usernames plus a company slug for branch operators.
+- Argon2id passwords, opaque database sessions, CSRF/Origin checks, login throttling, and audit
+  events.
+- Immediate session revocation on deactivation and password reset.
+- Owner and Head Office Administrator invitations; administrator-initiated branch password resets;
+  forced password change for temporary branch credentials.
+- TOTP MFA with hashed, one-time recovery codes. Platform-administrator MFA is mandatory; tenant MFA
+  is optional and recommended for owners.
+
+Implementation defaults still requiring policy confirmation: final username convention, shared
+branch-device rules, number of Head Office Administrators, owner continuity/backup, and optional
+recovery contact for branch users.

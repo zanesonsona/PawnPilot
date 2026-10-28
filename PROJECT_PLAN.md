@@ -5,14 +5,14 @@
 
 | Field | Value |
 |---|---|
-| Last updated | 2026-10-28 |
-| Current phase | **Phase 1 complete and accepted. Phase 2 not started.** |
+| Last updated | 2026-10-29 |
+| Current phase | **Phase 2 complete locally — awaiting review before Phase 3.** |
 | Pilot customer | Jerome's Pawnshop (branch count and workflows to be verified) |
 | Repository | `\\wsl.localhost\Debian\home\zane\Projects\PawnPilot` |
 | Primary stack | Next.js 16 / React 19 / TypeScript 5.9 (web) · NestJS 12 ESM / TypeScript 6 (API) / PostgreSQL 17 / Prisma 6.19.3 |
 | Production posture | Web-first, online-first, multi-tenant SaaS |
 
-**Approval gate:** Phase 1 is complete and accepted. Phase 2 must not begin until the remaining open decisions in sections 11 and 12 are confirmed and Phase 2 is explicitly approved. Phase 4 must not begin until the financial rules in section 7.1 are confirmed. Phase 1 verification is local; the GitHub Actions workflow has not run on a remote repository.
+**Approval gate:** Phase 1 is complete and accepted. Phase 2 was explicitly approved on 2026-10-29 and is complete locally, pending review. Phase 2 follows the original plan, with the Guard role removed. Do not begin Phase 3 without explicit approval. Phase 4 must not begin until the financial rules in section 7.1 are confirmed. Verification is local; the GitHub Actions workflow has not run on a remote repository.
 
 ---
 
@@ -22,8 +22,8 @@
 |---|---|---|
 | Phase 0 — Discovery | **Complete** | Repository inspected; architecture, ERD, API map, role matrix, rules, and testing plan documented. |
 | Phase 1 — Foundation | **Complete** | Accepted 2026-10-28. Monorepo, API, database, web shell, tests, and CI workflow implemented. Local gates pass; remote CI not yet run. |
-| Phase 2 — Authentication and tenancy | Not started | Blocked by the open decisions in section 12 and explicit Phase 2 approval. |
-| Phase 3 — Customers and items | Not started | Blocked by Phase 2. |
+| Phase 2 — Authentication and tenancy | **Complete locally** | Approved 2026-10-29. Accounts, tenant users, platform admins, sessions, roles, branch assignments, provisioning, invitations, MFA, rate limiting, audit events, tenant/branch guards, web auth flows, and RLS decision implemented. Local gates pass; remote CI and browser E2E not yet run. |
+| Phase 3 — Customers and items | Not started | Awaiting Phase 2 review and explicit approval. |
 | Phase 4 — Core pawn workflow | Not started | Blocked by Phase 3 and financial-rule confirmation. |
 | Phase 5 — Payments, renewals, redemption | Not started | Blocked by Phase 4. |
 | Phase 6 — Dashboards and reports | Not started | Blocked by Phase 5. |
@@ -56,21 +56,21 @@ Initial scope is web-first and online-first. Offline operation, hardware integra
 
 ## 2. Repository assessment
 
-The Phase 0 baseline is preserved in git commit `d1b2437`. Current state after Phase 1:
+The Phase 0 baseline is preserved in git commit `d1b2437`. Current state after Phase 2:
 
 | Area | Current finding |
 |---|---|
-| Version control | Git repository on `main`. Baseline commit `d1b2437`; Phase 1 commit follows verification. |
+| Version control | Git repository on `main`. Baseline `d1b2437`; Phase 1 `9bf154a`; Phase 2 commit added after verification. |
 | Application | npm-workspaces monorepo: `apps/web`, `apps/api`, `packages/api-client`. |
 | Frontend | Next.js `16.4.3`, React `19.3.0`, App Router, Tailwind CSS `4.3.3`. |
 | Backend | NestJS `12.3.2` modular monolith, native ESM, port `3001`. |
 | Language | Web TypeScript `5.9.3`; API TypeScript `6.0.2`; both `strict: true`. |
-| Database / ORM | PostgreSQL `17`; Prisma `6.19.3`; initial migration applied. |
-| Authentication | Not implemented. Planned for Phase 2. |
-| Tests / CI | Vitest unit tests, API end-to-end tests, ESLint, Prettier, and GitHub Actions workflow. |
-| Source files | Foundation web shell, NestJS health/OpenAPI API, Prisma schema/migration/seed. |
+| Database / ORM | PostgreSQL `17`; Prisma `6.19.3`; Phase 2 migrations applied. |
+| Authentication | Implemented in Phase 2: hybrid login, separate realms, opaque sessions, Argon2id, TOTP MFA, recovery codes, CSRF/Origin checks, audit events, invitations, and password reset. |
+| Tests / CI | Vitest unit tests, API end-to-end auth/tenancy tests, RLS spike, ESLint, Prettier, and GitHub Actions workflow. |
+| Source files | Authenticated web experience, NestJS auth/users/branches/platform modules, Prisma schema/migrations/seed, generated OpenAPI client. |
 | Local database path | `infra/docker-compose.yml`; this WSL environment lacks the Compose plugin, so verification used `docker run postgres:17-alpine`. |
-| Baseline lint / build | Both pass inside WSL after Phase 1. |
+| Baseline lint / build | All local Phase 2 gates pass inside WSL. |
 | Runtime | WSL Debian: Node `24.22.0`, npm `11.19.1`, Docker `26.1.5`, git `2.47.3`. |
 
 Remaining constraints:
@@ -81,7 +81,7 @@ Remaining constraints:
 4. **Prisma 6 is deliberately pinned.** Prisma 7's new contract/configuration format and driver adapters need a separate migration spike. The temporary `deepmerge-ts@8.0.2` override must be revisited with any Prisma upgrade.
 5. **Compose plugin may be absent.** The compose file is the documented path; environments without the plugin need it installed or an equivalent PostgreSQL container.
 6. **Remote CI is unverified.** The workflow exists, but no remote repository has executed it yet.
-7. **No authentication or financial data exists.** Phase 1 is infrastructure only.
+7. **No customer or financial data exists.** Phase 2 added authentication, tenant administration, and branch access only.
 
 ---
 
@@ -136,24 +136,24 @@ Use **npm workspaces** because npm is installed and a lockfile exists. Avoid Tur
 
 ### 3.3 Stack decisions
 
-| Layer | Position | Phase 1 status |
+| Layer | Position | Current status |
 |---|---|---|
 | Frontend | Next.js `16.4.3` App Router + React `19.3.0` + TypeScript `5.9.3` | Implemented |
-| UI | Tailwind CSS `4.3.3` now; shadcn/ui (Radix primitives) in Phase 2 | Partially implemented |
-| Server state | TanStack Query | Planned for Phase 2+ |
-| Forms | React Hook Form + Zod | Planned for Phase 2+ |
-| Tables | TanStack Table | Planned for Phase 2+ |
-| API client | `openapi-typescript` + `openapi-fetch` | Package scaffolded; generation in Phase 2 |
+| UI | Tailwind CSS `4.3.3`; custom auth and dashboard components | Implemented |
+| Server state | React Server Components for session/dashboard reads; TanStack Query deferred | Partially implemented |
+| Forms | Native React forms + server validation; RHF/Zod deferred | Partially implemented |
+| Tables | Native tables for the platform register; TanStack Table deferred | Partially implemented |
+| API client | `openapi-typescript`; generated types committed | Implemented |
 | Backend | NestJS `12.3.2` modular monolith, native ESM | Implemented |
 | Runtime | Node 24, npm 11, npm workspaces | Implemented |
 | Validation | `class-validator` + global `ValidationPipe` | Implemented |
 | ORM | Prisma `6.19.3` pinned; Prisma 7 migration is a separate spike | Implemented |
 | Database | PostgreSQL 17 locally; managed PostgreSQL in production | Implemented locally |
-| Auth | Opaque server-side sessions, Argon2id, TOTP MFA, separate platform-admin realm | Planned for Phase 2 |
+| Auth | Opaque server-side sessions, Argon2id, TOTP MFA, separate platform-admin realm | Implemented |
 | Files | S3-compatible private bucket | Planned |
 | Jobs | Redis-backed queue in production | Planned |
 | API docs | OpenAPI generated from NestJS | Implemented |
-| Testing | Vitest + Supertest | Implemented |
+| Testing | Vitest + Supertest + RLS spike | Implemented; browser E2E planned |
 
 ### 3.4 Backend modules
 
@@ -251,12 +251,12 @@ Do not implement offline mode, a local sync engine, or direct hardware integrati
 
 1. **Implemented:** Monorepo with `apps/web`, `apps/api`, and `packages/api-client`.
 2. **Implemented:** Next.js remains the React frontend; NestJS is the only backend.
-3. **Implemented:** Prisma + PostgreSQL, with Prisma pinned to `6.19.3` for Phase 1.
-4. **Proposed for Phase 2:** Separate tenant-user and platform-admin authentication realms.
-5. **Proposed for Phase 2:** Opaque server-side sessions in PostgreSQL, not JWT in browser storage.
+3. **Implemented:** Prisma + PostgreSQL, with Prisma pinned to `6.19.3`.
+4. **Implemented:** Separate tenant-user and platform-admin authentication realms.
+5. **Implemented:** Opaque server-side sessions in PostgreSQL, not JWT in browser storage.
 6. **Implemented:** Same-origin API routing through the web domain.
 7. **Implemented:** Next `cacheComponents` and `partialPrefetching` are disabled for the pilot.
-8. **Proposed for Phase 2:** App-level tenant authorization plus composite database foreign keys first; RLS as a tested backstop.
+8. **Implemented:** App-level tenant authorization plus composite database foreign keys. The RLS spike passed, but full RLS is deferred under ADR 0003.
 9. **Implemented:** NestJS 12 ESM runtime with TypeScript `nodenext` and Vitest.
 10. **Implemented:** Per-application environment files with committed `.env.example` templates.
 
@@ -369,8 +369,10 @@ This prevents a payment, ticket, or item from referencing another company's bran
 | `AUDIT_EVENT` | Append-only audit trail. |
 | `SUBSCRIPTION_PLAN`, `SUBSCRIPTION` | Manual platform subscription administration. |
 
-**Phase 1 implementation:** only `COMPANY` and `BRANCH` exist in the Prisma schema and initial
-migration. Every other entity above is planned and must not be treated as implemented.
+**Phase 2 implementation:** `COMPANY`, `BRANCH`, `ACCOUNT`, `USER`, `USER_BRANCH`, `SESSION`,
+`MFA_CHALLENGE`, `MFA_RECOVERY_CODE`, `PASSWORD_RESET_TOKEN`, `INVITATION`, and `AUDIT_EVENT` exist
+in the Prisma schema and migrations. Every other entity above is planned and must not be treated as
+implemented.
 
 ---
 
@@ -378,8 +380,7 @@ migration. Every other entity above is planned and must not be treated as implem
 
 All business endpoints are under `/api/v1`. Health endpoints are outside the versioned API. The API is JSON-only, documented with OpenAPI, and generated into the web client.
 
-**Phase 1 implementation:** only `GET /api/v1` metadata and `GET /health/live` / `GET /health/ready`
-exist. The endpoint map below is the target design for later phases, not current behavior.
+**Phase 2 implementation:** health, auth (including platform login, MFA enrollment/challenge, invitations, password reset, change password, logout, `me`), tenant user administration, branch administration, and platform company provisioning/owner invitations exist. The endpoint map below is the target design; endpoints not present in the generated OpenAPI document are not implemented.
 
 | Module | Base path | Major endpoints |
 |---|---|---|
@@ -433,39 +434,38 @@ Legend:
 - **—** — no access.
 - **Support** — only through an approved, time-limited, audited support-access workflow.
 
-| Capability | Platform Administrator | Company Owner | Head Office Administrator | Branch Operator | Guard |
-|---|---|---|---|---|---|
-| Provision companies, plans, subscriptions | Yes | — | — | — | — |
-| View platform health, usage counts, backup status | Yes | — | — | — | — |
-| View tenant metadata only | Yes | Own company | Own company | Own branch | — |
-| View customer records and financial transactions | — (except approved support access) | All | — by default | Assigned | — |
-| Manage company settings | — | Yes | — | — | — |
-| Create/manage branches | Initial provisioning only | Yes, within plan limits | — | — | — |
-| View staff directory and branch assignments | — | All | All | Own branch | — |
-| Invite/deactivate users | — | All tenant users | Branch users only | — | — |
-| Assign roles and branch access | — | All tenant users | Branch users only | — | — |
-| Reset branch-user passwords | — | Yes | Yes | — | — |
-| Create custom roles / edit permissions | — | Deferred; fixed roles initially | — | — | — |
-| Register/search customers | — | All | — | Assigned | — |
-| View full customer identification | — | Yes, audited | — | Masked; reveal only during verified workflow if approved | — |
-| Create pawn ticket/quote | — | All | — | Assigned | — |
-| Confirm/disburse standard ticket | — | All | — | Assigned | — |
-| Approve high-value ticket or override | — | Approval | — | Request only | — |
-| Record payment | — | All | — | Assigned | — |
-| Reverse payment | — | Approval | — | Request only | — |
-| Renew ticket | — | All | — | Assigned | — |
-| Redeem ticket / confirm collateral release | — | All | — | Assigned | — |
-| Void ticket after disbursement | — | Approval | — | — | — |
-| Record transaction adjustment | — | Approval | — | Request only | — |
-| Open/close cash session | — | All | — | Assigned, if enabled | — |
-| Approve cash variance | — | Approval | — | — | — |
-| View branch daily reports | — | All | — by default | Assigned | — |
-| View consolidated company reports | — | Yes | — by default | — | — |
-| Export reports / customer data | — | Yes, audited | — by default | Branch reports only, if approved | — |
-| View company audit trail | — | Yes | Access and user events only | Own actions only, if approved | — |
-| View platform audit trail | Yes | — | — | — | — |
-| Approve support access to tenant data | Two-person rule | Company consent | — | — | — |
-| Visitor/incident records | — | — | — | — | Optional module only |
+| Capability | Platform Administrator | Company Owner | Head Office Administrator | Branch Operator |
+|---|---|---|---|---|
+| Provision companies, plans, subscriptions | Yes | — | — | — |
+| View platform health, usage counts, backup status | Yes | — | — | — |
+| View tenant metadata only | Yes | Own company | Own company | Own branch |
+| View customer records and financial transactions | — (except approved support access) | All | — by default | Assigned |
+| Manage company settings | — | Yes | — | — |
+| Create/manage branches | Initial provisioning only | Yes, within plan limits | — | — |
+| View staff directory and branch assignments | — | All | All | Own branch |
+| Invite/deactivate users | — | All tenant users | Branch users only | — |
+| Assign roles and branch access | — | All tenant users | Branch users only | — |
+| Reset branch-user passwords | — | Yes | Yes | — |
+| Create custom roles / edit permissions | — | Deferred; fixed roles initially | — | — |
+| Register/search customers | — | All | — | Assigned |
+| View full customer identification | — | Yes, audited | — | Masked; reveal only during verified workflow if approved |
+| Create pawn ticket/quote | — | All | — | Assigned |
+| Confirm/disburse standard ticket | — | All | — | Assigned |
+| Approve high-value ticket or override | — | Approval | — | Request only |
+| Record payment | — | All | — | Assigned |
+| Reverse payment | — | Approval | — | Request only |
+| Renew ticket | — | All | — | Assigned |
+| Redeem ticket / confirm collateral release | — | All | — | Assigned |
+| Void ticket after disbursement | — | Approval | — | — |
+| Record transaction adjustment | — | Approval | — | Request only |
+| Open/close cash session | — | All | — | Assigned, if enabled |
+| Approve cash variance | — | Approval | — | — |
+| View branch daily reports | — | All | — by default | Assigned |
+| View consolidated company reports | — | Yes | — by default | — |
+| Export reports / customer data | — | Yes, audited | — by default | Branch reports only, if approved |
+| View company audit trail | — | Yes | Access and user events only | Own actions only, if approved |
+| View platform audit trail | Yes | — | — | — |
+| Approve support access to tenant data | Two-person rule | Company consent | — | — |
 
 ### Permission families
 
@@ -493,8 +493,7 @@ Legend:
 6. The Head Office Administrator is a tenant role, not a platform role. It manages branch-user accounts, branch assignments, and branch-user password resets. It has no financial permissions by default; any reporting access must be confirmed separately.
 7. Only a Company Owner can deactivate or change the role of a Head Office Administrator. At least one active Company Owner must remain. A platform administrator may perform an emergency security disable only through an audited support/security procedure, not routine tenant administration.
 8. Disabled users and deactivated branches are rejected immediately, even if a session cookie is still present.
-9. Guard has no default financial access. If no system duty exists, the guard does not need an account.
-10. Head Office Administrators use email login; branch users use username login. MFA is recommended for Head Office Administrators because they can deactivate branch accounts.
+9. Head Office Administrators use email login; branch users use username login. MFA is recommended for Head Office Administrators because they can deactivate branch accounts.
 
 ---
 
@@ -504,9 +503,9 @@ These must be answered before the related feature is built. Do not invent rates,
 
 | # | Area | Questions requiring confirmation | Needed by | Status |
 |---|---|---|---|---|
-| 1 | Company structure | Confirm actual branch count, legal entity or entities, whether all branches belong to one company tenant, and whether any branch is franchised or independently owned. | Before Phase 2 tenant provisioning | Open |
+| 1 | Company structure | Confirm actual branch count, legal entity or entities, whether all branches belong to one company tenant, and whether any branch is franchised or independently owned. | Before production tenant provisioning | Open |
 | 2 | Existing data | What system is used today: paper, Excel, or legacy software? What history must be migrated? Are there opening balances and existing ticket numbers? | Before pilot migration / Phase 7 | Open |
-| 3 | Staff and identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and Head Office Administrators; unique username for branch users. Head Office Administrator is the tenant-level access manager, not a Platform Administrator. Confirm username scope (company-scoped vs global), branch password-reset path, username convention, number of Head Office Administrators, and whether devices are shared. | Phase 2 | Partially answered |
+| 3 | Staff and identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and Head Office Administrators; unique username for branch users. Head Office Administrator is the tenant-level access manager, not a Platform Administrator. Implemented defaults: company-scoped usernames, administrator-initiated branch password resets, platform MFA mandatory. Open: final username convention, number of Head Office Administrators, shared-device rules. | Before production onboarding | Partially answered |
 | 4 | Approvals | Who approves high-value loans, voids, reversals, adjustments, cash variances, and financial settings changes? Can the same person request and approve? | Phase 2 | Open |
 | 5 | Financial products | Which pawn products exist: jewelry, gadgets, appliances, vehicles, others? What are the loan-to-value rules, minimum/maximum loans, appraisal authority, and item categories? | Phase 4 | Open |
 | 6 | Interest method | Is interest flat monthly, per annum, diminishing balance, advance/deducted, or another method? Provide the exact formula and at least three worked examples. | Phase 4 | Open |
@@ -618,9 +617,9 @@ monitoring remain future work.
 
 RLS can add a valuable tenant backstop, but it is only safe if implemented and tested reliably with Prisma's transaction model.
 
-1. Phase 2 implements application authorization, composite foreign keys, and the full cross-tenant test suite first.
-2. Run a focused RLS spike: application role without `BYPASSRLS`, `FORCE ROW LEVEL SECURITY`, and `set_config('app.company_id', ..., true)` inside every tenant transaction.
-3. Adopt RLS only if the spike proves correct behavior for reads, writes, joins, reports, background jobs, and connection pooling.
+1. Phase 2 implemented application authorization, composite foreign keys, and the cross-tenant test suite first.
+2. The Phase 2 spike used a non-owner role, `FORCE ROW LEVEL SECURITY`, `SET LOCAL ROLE`, and transaction-local `set_config('app.company_id', ..., true)`. It proved read/write isolation, zero rows without tenant context, and no context leakage across Prisma pool checkouts.
+3. **Decision (ADR 0003):** do not enable RLS on tenant tables in Phase 2. It remains a candidate backstop after a transaction-scoped Prisma access layer, a non-owner application role, explicit missing-context errors, and operational/performance review are designed.
 4. If adopted, keep it as a second layer. It never replaces permission and branch checks.
 5. Platform metadata tables are accessed through a separate platform context. Tenant tables are not casually readable by platform admins.
 
@@ -693,7 +692,7 @@ If offline operation is required, it needs a separate approved design covering d
 |---|---|---|---|
 | **0 — Discovery** | Repository inspection; architecture; ERD; API map; role matrix; risk list. | Direction approved. | **Complete** |
 | **1 — Foundation** | Initialize git and baseline commit; move scaffold to `apps/web`; create `apps/api`; npm workspaces; NestJS bootstrap; Prisma; PostgreSQL Docker Compose; env validation; logging and error envelope; health checks; OpenAPI; minimal web shell; lint/format/typecheck/test scripts; CI. | Lint, typecheck, unit and end-to-end tests, and builds pass in WSL; migration applies to an empty database; health/readiness, OpenAPI, and the web proxy work; CI workflow exists. Remote CI run is pending. No auth or financial features. | **Complete locally** |
-| **2 — Authentication and tenancy** | Accounts, tenant users, platform admins, sessions, roles, permissions, branch assignments, company provisioning, owner invitation, MFA, rate limiting, audit events, tenant and branch guards. RLS spike and decision. | Two-company isolation tests pass; operators cannot use unassigned branches; disabled users lose access immediately; sessions revoke correctly; platform admins cannot read tenant financial data. | Not started |
+| **2 — Authentication and tenancy** | Accounts, tenant users, platform admins, sessions, roles, permissions, branch assignments, company provisioning, owner invitation, MFA, rate limiting, audit events, tenant and branch guards, web auth experience, OpenAPI client generation, RLS spike and decision. | Two-company isolation tests pass; operators cannot use unassigned branches; disabled users lose access immediately; sessions revoke correctly; platform admins cannot read tenant financial data. | **Complete locally** (2026-10-29); remote CI and browser E2E pending |
 | **3 — Customers and items** | Customer records, identification records, duplicate review, notes, item categories, appraisal fields, private file uploads if approved. | Customer search/registration/update works; ID data is masked and audited; duplicate flags work; file access is private; permission and privacy tests pass. | Not started |
 | **4 — Core pawn workflow** | Confirmed financial rules; versioned pawn products; calculation module; quote endpoint; ticket and item creation; numbering; idempotency; state machine; print data; audit. | Owner validates calculations against anonymized real examples; ticket creation is atomic; numbering is concurrency-safe; retries do not duplicate; no silent deletion or editing. | Not started |
 | **5 — Payments, renewals, redemption** | Payment recording and allocations; receipts; renewals; redemption and release; reversals and adjustments; cash sessions if confirmed. | Full ticket lifecycle works; duplicate submissions are harmless; concurrent redemption is rejected; reversals are traceable; reconciliation matches source records. | Not started |
@@ -762,6 +761,62 @@ Environment notes:
 - Prisma's vulnerable transitive `deepmerge-ts@7.1.5` is overridden to `8.0.2`; Prisma generate,
   migrate deploy, and seed were re-run successfully with the override.
 
+### 9.3 Phase 2 task checklist
+
+- [x] Separate platform and tenant account realms, guards, cookies, and endpoints.
+- [x] Hybrid login: email for Owners/Head Office Administrators; company-scoped username + slug for branch operators.
+- [x] Argon2id passwords, opaque database-backed sessions, immediate revocation, login throttling.
+- [x] CSRF double-submit token and Origin allowlist enforcement.
+- [x] Mandatory platform-admin TOTP MFA with a public enrollment challenge and hashed one-time recovery codes.
+- [x] Tenant MFA enrollment, confirmation, disable, and recovery-code login.
+- [x] Invitations, invitation acceptance, self-service email reset, administrator branch resets, forced password change.
+- [x] Owner/Head Office Administrator/branch-operator boundaries and branch assignment checks.
+- [x] Company provisioning, owner invitations, branch-user creation, deactivation/reactivation.
+- [x] Audit events for authentication and tenant administration actions.
+- [x] Web login, MFA challenge/enrollment, recovery codes, dashboard, logout, invitation, reset, and change-password flows.
+- [x] Server-side session validation and redirects using `GET /api/v1/auth/me`.
+- [x] RLS spike, ADR 0003, CI step, and decision to defer full RLS.
+- [x] OpenAPI generation and committed TypeScript types.
+- [x] Local format, lint, typecheck, unit, end-to-end, RLS, build, migration, and seed checks.
+- [ ] Remote GitHub Actions run.
+- [ ] Browser automation (Playwright/axe).
+- [ ] Confirm actual company/branch structure and branch count.
+- [ ] Replace the placeholder Git author before shared history.
+
+### 9.4 Phase 2 verification record
+
+Run inside WSL on 2026-10-29 against PostgreSQL 17:
+
+```text
+npm run format:check                        → passed
+npm run lint                                → passed
+npm run typecheck                           → passed
+npm run test                                → 7 tests passed (3 API, 4 web)
+npm run test:e2e                            → 20 tests passed (3 health, 17 auth/tenancy)
+npm run test:rls                            → passed
+npm run build                               → passed (NestJS + Next.js)
+npm run openapi:generate                    → passed
+```
+
+Runtime smoke checks:
+
+- `GET /login` on the web app → `200`.
+- Unauthenticated `GET /` → `307` to `/login`.
+- Platform login → MFA setup challenge → TOTP enrollment → recovery codes → authenticated dashboard.
+- Authenticated `GET /login` → `307` to `/`.
+- Logout → `204`; the old session cookie returns `401` from `/auth/me` and `GET /` redirects to `/login`.
+- The API rejects a state-changing request with a disallowed `Origin`, and accepts one from the configured web origin.
+- A replayed MFA setup challenge and a replayed recovery code are rejected.
+- Deactivating a branch user revokes the active session, and an outstanding password-reset token created before deactivation cannot be completed after reactivation.
+
+Environment notes:
+
+- This WSL installation lacks the Docker Compose plugin. Verification used an equivalent `docker run postgres:17-alpine` container.
+- The GitHub Actions workflow has not run on a remote repository. Do not claim remote CI is green.
+- Browser automation is not implemented; the web checks above used a scripted HTTP client against the running Next.js and NestJS processes.
+- Git commits currently use the placeholder author `PawnPilot Dev <dev@pawnpilot.local>` because no global Git identity was configured. Replace it before shared or published history.
+- Prisma's vulnerable transitive `deepmerge-ts@7.1.5` is overridden to `8.0.2`; Prisma generate, migrate deploy, and seed were re-run successfully with the override.
+
 ---
 
 ## 10. Testing strategy
@@ -813,18 +868,18 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 | D-002 | Backend framework | NestJS 12 modular monolith | Implemented | You |
 | D-003 | ORM and database | Prisma `6.19.3` + PostgreSQL 17 | Implemented | You |
 | D-004 | Frontend | Next.js `16.4.3` App Router as React frontend | Implemented | You |
-| D-005 | Authentication | Separate tenant/platform realms; opaque DB sessions; Argon2id; TOTP MFA | Proposed for Phase 2 | You |
+| D-005 | Authentication | Separate tenant/platform realms; opaque DB sessions; Argon2id; TOTP MFA | Implemented in Phase 2 | You |
 | D-006 | API routing | Same-origin `/api/v1` through the web domain | Implemented | You |
 | D-007 | Frontend caching | Disable `cacheComponents` and `partialPrefetching` for pilot | Implemented | You |
-| D-008 | Tenant isolation | App authorization + composite FKs first; RLS spike in Phase 2 | Proposed for Phase 2 | You |
-| D-009 | UI system | Tailwind implemented; shadcn/ui + TanStack Query/Table + RHF/Zod planned | Partially implemented | You |
+| D-008 | Tenant isolation | App authorization + composite FKs now; RLS spike passed; full RLS deferred with ADR 0003 | Accepted (ADR 0003) | You |
+| D-009 | UI system | Tailwind implemented with custom components; shadcn/ui + TanStack Query/Table + RHF/Zod deferred | Partially implemented | You |
 | D-010 | Git baseline | Initialize git and commit scaffold before restructuring | Complete (`d1b2437`) | You |
 | D-011 | Deployment region | Singapore unless Philippine data-residency advice requires otherwise | Open | You |
-| D-012 | Staff identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and Head Office Administrators; unique username for branch users; no company-issued email required. Immediate deactivation and server-side session revocation required for both. Open: username scope, reset path, shared-device policy. | Accepted; policy details open | You |
+| D-012 | Staff identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and Head Office Administrators; unique username for branch users; no company-issued email required. Immediate deactivation and server-side session revocation required for both. Implemented defaults: company-scoped usernames, administrator-initiated branch resets, platform MFA mandatory. Open: shared-device policy and final username convention. | Accepted; implementation defaults recorded | You |
 | D-013 | Support access | Disable until a verified need; then time-limited, audited, read-only | Open | You |
 | D-014 | Subscription model | Manual administration initially; no billing gateway | Proposed | You |
 | D-015 | Offline operation | Online-only initially; separate design if required | Proposed | You |
-| D-016 | Custom roles | Deferred; fixed system roles for pilot | Proposed | You |
+| D-016 | Custom roles | Deferred; fixed system roles for pilot | Implemented (fixed roles) | You |
 | D-017 | Cash sessions | Implement only if confirmed by workflow | Open | You |
 | D-018 | Hardware | Browser printing/scanner investigation before Phase 4/7 | Open | You |
 | D-019 | API runtime format | NestJS 12 native ESM, TypeScript `nodenext`, Vitest | Implemented | You |
@@ -832,11 +887,12 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 | D-021 | Environment layout | Per-app `.env` / `.env.local`; commit only `.env.example` | Implemented | You |
 | D-022 | Local database path | Commit Compose file; use direct `docker run` where Compose plugin is absent | Implemented | You |
 | D-023 | Git author identity | Placeholder `PawnPilot Dev <dev@pawnpilot.local>`; replace before publishing | Open | You |
-| D-024 | Tenant administration role | The tenant-level "super admin" is the Head Office Administrator (`TENANT_ADMIN`), not the Platform Administrator. It manages branch users and branch assignments; the Company Owner manages Head Office Administrators. | Accepted | You |
+| D-024 | Tenant administration role | The tenant-level "super admin" is the Head Office Administrator (`HEAD_OFFICE_ADMIN`), not the Platform Administrator. It manages branch users and branch assignments; the Company Owner manages Head Office Administrators. | Implemented | You |
+| D-025 | Guard role | Remove the Guard role. Guards do not access the portal; no Guard accounts, permissions, or branch assignments are created. | Accepted | You |
 
 ---
 
-## 12. Phase 1 review and Phase 2 readiness
+## 12. Phase 1 close-out and Phase 2 decisions
 
 ### Phase 1 close-out
 
@@ -848,18 +904,19 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 - [x] Stopped for review before Phase 2.
 - [x] Review Phase 1 and accept it for close-out (2026-10-28).
 
-### Phase 2 decisions required before start
+### Phase 2 decisions and implementation status
 
-- [ ] Confirm deployment target and region.
 - [x] Confirm staff identity model: **hybrid email/username login accepted** (2026-10-28).
 - [x] Confirm tenant-level "super admin": **Head Office Administrator**, not Platform Administrator (2026-10-28).
+- [x] Phase 2 scope: use the original plan; Guard role removed (2026-10-29).
+- [x] Phase 2 explicitly approved and started (2026-10-29).
+- [x] Platform-administrator MFA made mandatory; TOTP enrollment and hashed recovery codes implemented.
+- [x] Company-scoped usernames and administrator-initiated branch password resets implemented as defaults.
+- [x] RLS spike completed; full RLS deferred in ADR 0003.
 - [ ] Confirm number of Head Office Administrators per tenant and the owner continuity/backup process.
-- [ ] Confirm hybrid login policy details: username scope (company-scoped vs global), branch
-  password-reset path, username convention, shared-device rules, and MFA scope.
+- [ ] Confirm remaining hybrid login details: final username convention and shared-device rules.
 - [ ] Confirm support-access policy.
 - [ ] Confirm actual company/branch structure and whether all branches belong to one tenant.
-- [ ] Confirm Phase 2 scope and acceptance criteria.
-- [ ] Explicitly approve Phase 2 after the decisions above are resolved.
 - [ ] Replace the placeholder Git author identity before shared or published commits.
 
 ### Later decisions
@@ -867,7 +924,7 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 - [ ] Confirm cash-session scope before Phase 5.
 - [ ] Confirm all financial rules in section 7.1 before Phase 4.
 
-**Phase 1 is complete and accepted. Phase 2 is not approved until the unchecked Phase 2 items are resolved and Phase 2 is explicitly approved. Phase 4 remains blocked on the financial rules in section 7.1.**
+**Phase 1 is complete and accepted. Phase 2 was approved on 2026-10-29 and is complete locally, pending review. The unchecked items above remain policy, production, or identity decisions; they do not change the local Phase 2 implementation record. Do not begin Phase 3 without explicit approval. Phase 4 remains blocked on the financial rules in section 7.1.**
 
 ---
 
@@ -898,6 +955,7 @@ cp apps/web/.env.example apps/web/.env.local
 npm run db:up          # requires the Docker Compose plugin
 npm run db:generate
 npm run db:migrate
+npm run db:seed        # development platform administrator
 npm run dev
 ```
 
@@ -909,17 +967,19 @@ npm run lint
 npm run typecheck
 npm run test
 npm run test:e2e
+npm run test:rls
 npm run build
 npm run db:deploy
 npm run db:seed
+npm run openapi:generate   # while the API is running
 ```
 
-Recorded result on 2026-10-28: all commands above passed inside WSL. The API and web production
-builds were also started and smoke-tested. `npm ci` reported zero vulnerabilities. See section 9.2
-for the exact test counts and runtime checks.
+Recorded result on 2026-10-28: all Phase 1 commands passed inside WSL; the API and web production
+builds were also started and smoke-tested; `npm ci` reported zero vulnerabilities. Phase 2 results
+are in section 9.4. Phase 1 counts are in section 9.2.
 
 The Compose file is committed at `infra/docker-compose.yml`. Because this WSL environment lacks the
-Compose plugin, Phase 1 verification used an equivalent `docker run postgres:17-alpine` container.
+Compose plugin, local verification used an equivalent `docker run postgres:17-alpine` container.
 
 ---
 
@@ -932,25 +992,26 @@ Compose plugin, Phase 1 verification used an equivalent `docker run postgres:17-
 | 2026-10-28 | Phase 1 accepted and closed. Initial decision accepted email login for staff and owners. Recorded immediate deactivation/session revocation requirements in ADR 0002. Phase 2 remains not started pending the remaining decisions and explicit approval. |
 | 2026-10-28 | Revised staff login decision to a hybrid model: email for Platform Administrators, Company Owners, and head-office administrators; unique username for branch users. Renamed ADR 0002 to `0002-staff-login-identity.md` and recorded the open username-scope and password-reset questions. |
 | 2026-10-28 | Clarified that "super admin" means the tenant-level Head Office Administrator, not the Platform Administrator. Added the role to the role matrix with branch-user access administration only; the Company Owner manages Head Office Administrators and owns tenant continuity. |
+| 2026-10-29 | Removed the Guard role from the role matrix and portal scope. Phase 2 approved and started using the original plan as the baseline; no Guard accounts, permissions, or branch assignments will be created. |
+| 2026-10-29 | Phase 2 implemented locally: account/session/MFA/recovery models and migrations; tenant/platform auth; Argon2id and opaque sessions; CSRF Origin allowlist; TOTP MFA with mandatory platform enrollment; invitations, password reset, and forced password changes; users, branches, and platform provisioning APIs; audit events and throttling; web login/MFA/dashboard/logout/reset flows; OpenAPI client generation; RLS spike and ADR 0003. Local format, lint, typecheck, unit, e2e, RLS, build, migration, and seed checks pass. Remote CI and browser E2E remain pending. |
 
 ---
 
 ## 15. Next step
 
-Phase 1 is complete and accepted. Review the remaining decisions in sections 11 and 12.
+Phase 2 is complete locally. Review the implementation record in sections 9.3 and 9.4, and the
+remaining decisions in sections 11 and 12.
 
-Confirm the Phase 2 decisions and explicitly approve Phase 2 before any authentication or tenancy
-code is written:
+Before Phase 3 starts:
 
-1. Deployment target and region.
-2. Hybrid login policy details: username scope and convention, branch password-reset path,
-   shared-device rules, and MFA scope.
-3. Number of Head Office Administrators per tenant and owner continuity/backup process.
-4. Support-access policy.
-5. Actual company/branch structure and tenant boundaries.
-6. Phase 2 scope and acceptance criteria.
-7. Git author identity for shared commits.
-8. Explicit approval to start Phase 2.
+1. Review the Phase 2 auth, tenancy, web, and RLS changes.
+2. Confirm the remaining staff-identity policies: shared-device rules, final username convention,
+   number of Head Office Administrators, and owner continuity/backup.
+3. Confirm the actual Jerome's Pawnshop company/branch structure and branch count.
+4. Decide when to run the GitHub Actions workflow on a remote repository and add browser automation.
+5. Replace the placeholder Git author before shared or published history.
+6. Explicitly approve Phase 3.
 
-Do not begin Phase 2, add authentication, create tenant records, or add financial features yet.
-Do not begin Phase 4 until all financial rules in section 7.1 are confirmed.
+Do not begin Phase 3 without explicit approval. Do not begin Phase 4 until all financial rules in
+section 7.1 are confirmed. Do not deploy to production or migrate real data without explicit
+authorization.
