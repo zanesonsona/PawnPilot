@@ -10,7 +10,7 @@ security plan, testing strategy, decisions, phase checklist, and verification re
 
 - [`PROJECT_PLAN.md`](./PROJECT_PLAN.md)
 - [`docs/adr/0001-foundation-stack.md`](./docs/adr/0001-foundation-stack.md)
-- [`docs/adr/0002-staff-email-login.md`](./docs/adr/0002-staff-email-login.md)
+- [`docs/adr/0002-staff-login-identity.md`](./docs/adr/0002-staff-login-identity.md)
 
 ## What Phase 1 delivered
 
@@ -34,8 +34,8 @@ production deployment exist yet.
 - **Database:** PostgreSQL 17 with Prisma 6.19.3
 - **API:** Versioned REST under `/api/v1`, OpenAPI at `/api/openapi.json`
 - **Tests:** Vitest for API and web; Supertest for API end-to-end checks
-- **Auth:** Planned for Phase 2; email login accepted, with separate tenant/platform realms and
-  opaque server-side sessions
+- **Auth:** Planned for Phase 2; hybrid login accepted (email for privileged/head-office users,
+  username for branch users), with separate tenant/platform realms and opaque server-side sessions
 
 ## Repository layout
 
@@ -151,8 +151,8 @@ recorded evidence for this phase.
 ## Open decisions before Phase 2
 
 - Deployment target and region.
-- Email login policy: company-issued email requirement, global email uniqueness, and shared-device
-  rules. See ADR 0002.
+- Hybrid login policy: head-office/branch role mapping, username scope and convention, branch
+  password-reset path, shared-device rules, and MFA scope. See ADR 0002.
 - Support-access policy.
 - Cash-session scope.
 - Git author identity for future commits (the local repository currently uses a placeholder).

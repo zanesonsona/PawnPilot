@@ -500,7 +500,7 @@ These must be answered before the related feature is built. Do not invent rates,
 |---|---|---|---|---|
 | 1 | Company structure | Confirm actual branch count, legal entity or entities, whether all branches belong to one company tenant, and whether any branch is franchised or independently owned. | Before Phase 2 tenant provisioning | Open |
 | 2 | Existing data | What system is used today: paper, Excel, or legacy software? What history must be migrated? Are there opening balances and existing ticket numbers? | Before pilot migration / Phase 7 | Open |
-| 3 | Staff and identity | Email login accepted. Confirm whether company-issued email is mandatory or any email is allowed, whether one email may belong to multiple company tenants, which roles exist per branch (operator, cashier, appraiser, manager, guard), and whether devices are shared. | Phase 2 | Partially answered |
+| 3 | Staff and identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and head-office users; unique username for branch users. Confirm head-office/branch role mapping, username scope (company-scoped vs global), branch password-reset path, username convention, and whether devices are shared. | Phase 2 | Partially answered |
 | 4 | Approvals | Who approves high-value loans, voids, reversals, adjustments, cash variances, and financial settings changes? Can the same person request and approve? | Phase 2 | Open |
 | 5 | Financial products | Which pawn products exist: jewelry, gadgets, appliances, vehicles, others? What are the loan-to-value rules, minimum/maximum loans, appraisal authority, and item categories? | Phase 4 | Open |
 | 6 | Interest method | Is interest flat monthly, per annum, diminishing balance, advance/deducted, or another method? Provide the exact formula and at least three worked examples. | Phase 4 | Open |
@@ -600,9 +600,9 @@ monitoring remain future work.
 ### 8.3 Authentication and session details
 
 - Passwords are hashed with Argon2id using tuned parameters. Never store or log plaintext passwords.
-- Unknown-email login attempts use a dummy hash check to reduce timing leakage. Login errors are generic.
+- Unknown login identifier attempts use a dummy hash check to reduce timing leakage. Login errors are generic.
 - Login is rate-limited by IP and account. Lockouts are progressive and time-bound, not permanent.
-- Password reset and invitation tokens are random, hashed at rest, single-use, and time-limited. Responses do not reveal whether an email exists.
+- Password reset, invitation, and username setup tokens are random, hashed at rest, single-use, and time-limited. Responses do not reveal whether an account exists.
 - MFA uses TOTP with hashed recovery codes. MFA is mandatory for platform admins and recommended for company owners; operator MFA is configurable.
 - High-risk actions require step-up re-authentication: password and, where enabled, MFA.
 - Cookies are first-party through same-origin API routing. CSRF protection uses an `Origin` allowlist plus a double-submit CSRF token for state-changing requests.
@@ -814,7 +814,7 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 | D-009 | UI system | Tailwind implemented; shadcn/ui + TanStack Query/Table + RHF/Zod planned | Partially implemented | You |
 | D-010 | Git baseline | Initialize git and commit scaffold before restructuring | Complete (`d1b2437`) | You |
 | D-011 | Deployment region | Singapore unless Philippine data-residency advice requires otherwise | Open | You |
-| D-012 | Staff identity | Email login accepted for staff and owners; one login account per person; company-issued email preferred; immediate account deactivation and server-side session revocation required. Open: company-email requirement, global uniqueness, shared-device policy. | Accepted; policy details open | You |
+| D-012 | Staff identity | Hybrid login accepted: email for Platform Administrators, Company Owners, and head-office users; unique username for branch users; no company-issued email required. Immediate deactivation and server-side session revocation required for both. Open: role mapping, username scope, reset path, shared-device policy. | Accepted; policy details open | You |
 | D-013 | Support access | Disable until a verified need; then time-limited, audited, read-only | Open | You |
 | D-014 | Subscription model | Manual administration initially; no billing gateway | Proposed | You |
 | D-015 | Offline operation | Online-only initially; separate design if required | Proposed | You |
@@ -844,9 +844,10 @@ CI gates: format check, lint, typecheck, unit tests, API end-to-end tests, build
 ### Phase 2 decisions required before start
 
 - [ ] Confirm deployment target and region.
-- [x] Confirm staff identity model: **email login accepted** (2026-10-28).
-- [ ] Confirm email login policy details: company-issued email requirement, global uniqueness,
-  shared-device rules, and transactional email provider.
+- [x] Confirm staff identity model: **hybrid email/username login accepted** (2026-10-28).
+- [ ] Confirm hybrid login policy details: head-office/branch role mapping, username scope
+  (company-scoped vs global), branch password-reset path, username convention, shared-device rules,
+  and MFA scope.
 - [ ] Confirm support-access policy.
 - [ ] Confirm actual company/branch structure and whether all branches belong to one tenant.
 - [ ] Confirm Phase 2 scope and acceptance criteria.
@@ -920,7 +921,8 @@ Compose plugin, Phase 1 verification used an equivalent `docker run postgres:17-
 |---|---|
 | 2026-10-28 | Phase 0 completed. Repository inspected. Architecture, ERD, API map, role matrix, business-rule register, security plan, testing strategy, and phase checklist documented. Phase 1 not started. |
 | 2026-10-28 | Phase 1 completed locally and stopped for review. Initialized git and baseline `d1b2437`; created npm-workspaces monorepo; moved the Next.js app to `apps/web`; added NestJS 12 ESM API, Prisma 6.19.3 schema/migration/seed, PostgreSQL 17 Compose config, config validation, Pino request logging and IDs, security headers, error envelope, health checks, OpenAPI, web shell, same-origin proxy, Vitest unit/e2e tests, ESLint/Prettier/typecheck/build scripts, and GitHub Actions CI. Recorded: `npm ci` 0 vulnerabilities; 7 unit tests and 3 API e2e tests pass; builds, migration deploy, seed, and runtime smoke checks pass. Remote CI and Git identity remain open. |
-| 2026-10-28 | Phase 1 accepted and closed. Accepted email login for staff and owners. Recorded immediate deactivation/session revocation requirements and open email-policy details in ADR 0002. Phase 2 remains not started pending the remaining decisions and explicit approval. |
+| 2026-10-28 | Phase 1 accepted and closed. Initial decision accepted email login for staff and owners. Recorded immediate deactivation/session revocation requirements in ADR 0002. Phase 2 remains not started pending the remaining decisions and explicit approval. |
+| 2026-10-28 | Revised staff login decision to a hybrid model: email for Platform Administrators, Company Owners, and head-office users; unique username for branch users. Renamed ADR 0002 to `0002-staff-login-identity.md` and recorded the open role-mapping, username-scope, and password-reset questions. |
 
 ---
 
@@ -932,8 +934,8 @@ Confirm the Phase 2 decisions and explicitly approve Phase 2 before any authenti
 code is written:
 
 1. Deployment target and region.
-2. Email login policy details: company-issued requirement, global uniqueness, shared-device rules,
-   and transactional email provider.
+2. Hybrid login policy details: head-office/branch role mapping, username scope and convention,
+   branch password-reset path, shared-device rules, and MFA scope.
 3. Support-access policy.
 4. Actual company/branch structure and tenant boundaries.
 5. Phase 2 scope and acceptance criteria.
